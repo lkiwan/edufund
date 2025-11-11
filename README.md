@@ -1,238 +1,356 @@
-# EduFund Platform
+# EduFund - Educational Crowdfunding Platform
 
-A full‑stack React + Express application for discovering, creating, and managing student fundraising campaigns. It uses Vite for the frontend dev server, Express for the backend API, and SQLite (via `better-sqlite3`) for data storage.
+A comprehensive full-stack crowdfunding platform designed specifically for educational fundraising. Students can create campaigns for their educational needs while donors can discover and support meaningful educational causes.
 
 ## Features
-- Campaign discovery with filters, pagination, featured carousel
-- Campaign details with donors list and quick donation flow
-- Student dashboard: create campaign, manage content, analytics (scaffolded)
-- Admin and donor dashboards (UI scaffolding)
-- Authentication service (basic login/register helpers)
-- TailwindCSS for styling; Framer Motion for animations
-- SQLite persistence with seed/migration script
+
+### For Students
+- **Campaign Creation & Management**: Create detailed fundraising campaigns with images, goals, and descriptions
+- **Campaign Review Workflow**: Automatic review process for campaign approval
+- **Real-time Analytics**: Track donations, views, shares, and campaign performance
+- **Profile Management**: Manage student profiles with verification workflow
+- **Campaign Updates**: Post updates and milestones to keep donors informed
+- **Milestone Celebrations**: Automatic celebrations when reaching funding milestones
+
+### For Donors
+- **Campaign Discovery**: Browse campaigns with advanced filters (category, location, university)
+- **Featured Campaigns**: Highlighted campaigns on the homepage carousel
+- **Donation Tracking**: Complete donation history and receipt generation
+- **Donor Wall**: Recognition wall showing top donors and recent contributions
+- **Favorites System**: Bookmark and track favorite campaigns
+- **Social Sharing**: Share campaigns on social media platforms
+- **Comments**: Engage with students through campaign comments
+
+### For Administrators
+- **Campaign Review**: Approve or reject submitted campaigns
+- **Profile Verification**: Verify student profiles and documentation
+- **Platform Analytics**: Comprehensive dashboard with platform-wide metrics
+- **User Management**: Manage users across all roles
+- **Content Moderation**: Monitor and moderate platform content
+
+### Platform Features
+- **Multi-role Authentication**: Student, Donor, and Admin roles
+- **Secure Payment Processing**: Donation tracking and management
+- **Email Notifications**: Automated email system for key events
+- **Image Upload**: Campaign image management with thumbnails
+- **Responsive Design**: Mobile-friendly interface with TailwindCSS
+- **Real-time Updates**: Live campaign statistics and notifications
 
 ## Tech Stack
-- Frontend: React 18, Vite, React Router, TailwindCSS
-- Backend: Express, CORS
-- Database: SQLite (`better-sqlite3`)
-- Utilities: `date-fns`, `lucide-react`, etc.
+
+### Frontend
+- **React 18** - Modern UI library
+- **Vite** - Fast build tool and dev server
+- **React Router** - Client-side routing
+- **TailwindCSS** - Utility-first CSS framework
+- **Framer Motion** - Animation library
+- **Lucide React** - Icon library
+
+### Backend
+- **Node.js & Express** - Server framework
+- **MySQL** - Relational database
+- **JWT** - Authentication tokens
+- **Bcrypt** - Password hashing
+- **Multer** - File upload handling
+- **Sharp** - Image processing
+- **Nodemailer** - Email service
+
+### Development Tools
+- **ESLint** - Code linting
+- **PostCSS** - CSS processing
+- **CORS** - Cross-origin resource sharing
 
 ## Getting Started
-- Prerequisites: Node.js 18+ and npm
 
-Install dependencies:
-- `npm install`
+### Prerequisites
+- **Node.js** 18+ and npm
+- **MySQL** 8.0+ or XAMPP/MAMP
+- **Git** for version control
 
-Start backend API (Express):
-- `node server.js`
-- Runs on `http://localhost:3001/`
+### Installation
 
-Start frontend (Vite):
-- `npm start`
-- Open the URL printed by Vite (typically `http://localhost:5173/`)
+1. **Clone the repository**
+```bash
+git clone https://github.com/lkiwan/edufund.git
+cd edufund
+```
 
-Build production:
-- `npm run build`
-- Preview production build:
-- `npm run serve`
+2. **Install dependencies**
+```bash
+npm install
+```
 
-## Dev Proxy
-Frontend calls the backend via relative paths like `/api/...`. The Vite dev server proxies these to Express:
-- Config: `vite.config.mjs`
-- Proxy: `/api` → `http://localhost:3001`
+3. **Configure environment variables**
 
-## Database
-The app uses a local SQLite file at `src/db/edufund.sqlite`.
+Create a `.env` file in the root directory based on `.env.example`:
 
-Initialize, migrate, and seed sample data:
-- `node scripts/migrate-and-seed.js`
-- Creates tables if missing and inserts 6 sample campaigns.
+```env
+# Database Configuration
+DB_HOST=10.255.255.254
+DB_USER=root
+DB_PASSWORD=your_mysql_password
+DB_NAME=edufund
+DB_PORT=3306
 
-### Core Tables
-- `campaigns`: basic campaign info (title, description, `goal_amount`, `current_amount`, category, city, university, `cover_image`, status, `created_at`, `end_date`)
-- `campaign_metrics`: per‑campaign analytics (views, shares, updates)
-- `donations`: donation records (amount, donor info, timestamp)
-- `users`: email/password/role for authentication helpers
+# Server Configuration
+PORT=5000
+NODE_ENV=development
 
-## API Endpoints
-Backend served from `server.js`:
-- `POST /api/auth/login` — login with `email`, `password`
-- `POST /api/auth/register` — register `email`, `password`, optional `role`
-- `POST /api/campaigns` — create a campaign (title, description, goal, category, location/city, university, images)
-- `GET /api/campaigns` — list campaigns (maps DB fields to UI keys like `goalAmount`, `raisedAmount`, `image`)
-- `GET /api/campaigns/:id` — campaign details
-- `GET /api/campaigns/:id/donations` — donors list for a campaign
-- `POST /api/donations` — add a donation and increment `current_amount`
-- `GET /api/analytics/campaign/:id` — totals and metrics for a single campaign
-- `GET /api/analytics/student/:userId` — aggregate analytics (requires middleware)
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key_here
 
-## Frontend Routes
-Defined in `src/Routes.jsx`:
-- `/` → `CampaignDiscovery`
-- `/campaign-discovery` → discovery page
-- `/campaign-details` → details page (reads `id` from state or query)
-- `/student-dashboard` (+ subroutes: create/profile/documents/analytics)
-- `/admin-dashboard`
-- `/donor-dashboard`
-- `/login-register`
+# Email Configuration (Optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+
+# API Keys (Optional)
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
+```
+
+4. **Set up the database**
+
+Start your MySQL server (XAMPP/MAMP or standalone), then initialize the database:
+
+```bash
+node create-database.js
+node initialize-tables.js
+```
+
+5. **Seed sample data (optional)**
+```bash
+node seed-sample-data.js
+node add-test-user.js
+```
+
+### Running the Application
+
+**Development Mode:**
+
+Start the backend server:
+```bash
+npm start
+# or
+node server.js
+```
+Server runs on `http://localhost:5000`
+
+Start the frontend dev server (in a new terminal):
+```bash
+npm run dev
+```
+Frontend runs on `http://localhost:5173`
+
+**Production Build:**
+```bash
+npm run build
+npm run serve
+```
 
 ## Project Structure
+
 ```
-./
-├── server.js                 # Express API and static build serving
-├── vite.config.mjs           # Vite dev server config + proxy
-├── package.json              # Scripts: start/build/serve
-├── scripts/                  # Maintenance scripts
-│   ├── migrate-and-seed.js   # Creates tables and seeds campaigns
-│   └── seed-campaigns.js     # Basic seeding (legacy)
+edufund/
 ├── src/
+│   ├── components/          # React components
+│   │   ├── layout/         # Navigation, Footer
+│   │   ├── ui/             # Reusable UI components
+│   │   ├── DonationModal.jsx
+│   │   ├── DonorWall.jsx
+│   │   ├── FavoriteButton.jsx
+│   │   ├── MilestoneCelebration.jsx
+│   │   └── ShareButtons.jsx
+│   ├── pages/              # Page components
+│   │   ├── Home.jsx
+│   │   ├── Discover.jsx
+│   │   ├── CampaignDetails.jsx
+│   │   ├── CreateCampaign.jsx
+│   │   ├── StudentDashboard.jsx
+│   │   ├── DonorDashboard.jsx
+│   │   ├── AdminDashboard.jsx
+│   │   └── Login.jsx
+│   ├── services/           # API services
+│   │   └── api.js
+│   ├── utils/              # Utility functions
+│   │   ├── currency.js
+│   │   └── toast.js
+│   ├── data/               # Static data
+│   │   ├── moroccoLocations.js
+│   │   └── moroccoUniversities.js
+│   ├── styles/             # CSS files
+│   │   └── index.css
 │   ├── App.jsx
-│   ├── index.jsx
-│   ├── Routes.jsx            # React Router configuration
-│   ├── db/
-│   │   ├── edufund.sqlite    # SQLite DB file
-│   │   └── init-db.js        # DB init and schema creation
-│   ├── services/
-│   │   ├── authService.js    # Auth helpers + middleware
-│   │   └── dbService.js      # Server-side DB loader guard
-│   ├── components/           # Shared components + UI primitives
-│   ├── pages/                # Feature pages
-│   │   ├── campaign-discovery/
-│   │   ├── campaign-details/
-│   │   ├── student-dashboard/
-│   │   ├── admin-dashboard/
-│   │   ├── donor-dashboard/
-│   │   └── login-register/
-│   ├── styles/               # Tailwind entry
-│   └── utils/
-├── public/                   # Static assets
-├── build/                    # Production output (`npm run build`)
+│   ├── Routes.jsx
+│   └── index.jsx
+├── routes/                 # Express routes
+│   └── profileRoutes.js
+├── public/                 # Static assets
+│   └── assets/
+├── uploads/                # User uploaded files
+│   └── campaigns/
+├── scripts/                # Database scripts
+│   ├── seed-campaigns.js
+│   └── migrate-and-seed.js
+├── server.js               # Express server
+├── package.json
+├── vite.config.mjs         # Vite configuration
+├── tailwind.config.js      # Tailwind configuration
 └── README.md
 ```
 
-## Common Workflows
-- Seed dev data: `node scripts/migrate-and-seed.js`
-- Run backend then frontend: `node server.js` and `npm start`
-- Verify API: `curl http://localhost:3001/api/campaigns`
-- Open UI: `http://localhost:5173/campaign-discovery`
+## API Documentation
 
-## Notes
-- If the discovery page shows “Failed to load campaigns”, ensure:
-  - Backend is running on `3001`
-  - Dev proxy is active (restart `npm start` after config changes)
-  - Browser requests to `/api/campaigns` return HTTP 200
+### Authentication
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - User login
+- `GET /api/auth/user` - Get current user
 
-## GoFundMe-like Feature Upgrade (SQLite-backed)
+### Campaigns
+- `GET /api/campaigns` - List all campaigns (with filters)
+- `GET /api/campaigns/:id` - Get campaign details
+- `POST /api/campaigns` - Create new campaign
+- `PUT /api/campaigns/:id` - Update campaign
+- `DELETE /api/campaigns/:id` - Delete campaign
+- `GET /api/campaigns/:id/updates` - Get campaign updates
+- `POST /api/campaigns/:id/updates` - Post campaign update
+- `GET /api/campaigns/:id/comments` - Get campaign comments
+- `POST /api/campaigns/:id/comments` - Post comment
 
-The project now includes richer crowdfunding features connected to SQLite.
+### Donations
+- `GET /api/donations` - List donations
+- `POST /api/donations` - Create donation
+- `GET /api/campaigns/:id/donations` - Get campaign donations
 
-### Highlights
-- Campaign updates: running logs and milestones per campaign.
-- Comments: discussion threads on campaigns.
-- Favorites: let users bookmark campaigns.
-- Enhanced campaign discovery: filters, search, sort, pagination, featured flag.
-- Consistent donations payload: UI expects `donations` array.
+### Favorites
+- `GET /api/favorites` - Get user favorites
+- `POST /api/favorites/:campaignId` - Add to favorites
+- `DELETE /api/favorites/:campaignId` - Remove from favorites
 
-### New/Extended Database Schema
-- `campaign_updates(id, campaign_id, title, content, created_at)`
-- `campaign_comments(id, campaign_id, user_id, comment, created_at)`
-- `favorites(id, user_id, campaign_id, created_at)`
-- `campaigns` extended with: `user_id`, `featured`, `student_name`, `student_avatar`, `student_university`, `student_field`, `student_year`
+### Admin
+- `GET /api/admin/campaigns/pending` - Get pending campaigns
+- `PUT /api/admin/campaigns/:id/approve` - Approve campaign
+- `PUT /api/admin/campaigns/:id/reject` - Reject campaign
+- `GET /api/admin/users` - List all users
+- `GET /api/admin/analytics` - Platform analytics
 
-### API Additions
-- `GET /api/campaigns` with query params:
-  - `q` (search), `category`, `featured` (boolean), `sort` (`recent`|`popular`), `page`, `pageSize`
-- `GET /api/campaigns/:id/updates` → returns `{ updates: Update[] }`
-- `POST /api/campaigns/:id/updates` → body `{ title, content }`
-- `GET /api/campaigns/:id/comments` → returns `{ comments: Comment[] }`
-- `POST /api/campaigns/:id/comments` → body `{ comment }`
-- `POST /api/favorites/:campaignId` → favorite a campaign (requires auth in future)
-- `DELETE /api/favorites/:campaignId` → remove favorite
-- `GET /api/favorites` → list current user favorites
-- `GET /api/campaigns/:id/donations` → returns `{ donations: Donation[] }`
+### Analytics
+- `GET /api/analytics/campaign/:id` - Campaign analytics
+- `GET /api/analytics/student/:userId` - Student analytics
 
-### Frontend Notes
-- Campaign Details page now fetches updates from `/api/campaigns/:id/updates`.
-- Donations parsing aligns to `{ donations: [...] }`.
-- Dev proxy forwards `/api/*` to backend on `http://localhost:3001`.
+### Profiles
+- `GET /api/profiles/:userId` - Get user profile
+- `PUT /api/profiles/:userId` - Update profile
+- `PUT /api/admin/profiles/:userId/approve` - Approve profile
+- `PUT /api/admin/profiles/:userId/reject` - Reject profile
 
-### Migration & Seeding
-- Run `node scripts/migrate-and-seed.js` to ensure tables/seed data exist.
-- Backend auto-initializes schema via `src/db/init-db.js` on server start.
+For detailed API documentation, see [COMPLETE_API_REFERENCE.md](COMPLETE_API_REFERENCE.md)
 
----
+## Database Schema
 
-## Flask + PostgreSQL Backend (New)
+### Core Tables
+- **users** - User accounts (email, password, role)
+- **campaigns** - Campaign information
+- **donations** - Donation records
+- **campaign_updates** - Campaign progress updates
+- **campaign_comments** - User comments
+- **favorites** - User favorite campaigns
+- **campaign_metrics** - Campaign analytics
+- **profiles** - Extended user profile information
+- **share_tracking** - Social media share tracking
 
-The backend has been reimplemented in Flask with PostgreSQL while preserving all existing API shapes expected by the React UI.
+## Development Workflow
 
-### Tech
-- Flask + Flask-CORS + Flask-SQLAlchemy + Flask-Migrate
-- PostgreSQL via `psycopg2-binary`
-- JWT auth via `PyJWT`; password hashing via `bcrypt`
-
-### Directory
-- `backend/` — Flask app, models, routes, seed
-  - `app.py` — app factory and blueprint registration
-  - `config.py` — loads `DATABASE_URL`, `JWT_SECRET`
-  - `models.py` — SQLAlchemy models and relationships
-  - `routes/` — blueprints: `auth`, `campaigns`, `donations`, `favorites`, `analytics`
-  - `utils/auth.py` — JWT helpers and `require_auth`
-  - `seed.py` — demo data seeding
-  - `requirements.txt` — Python deps
-
-### Environment (.env)
-```
-DATABASE_URL=postgresql://postgres:<password>@localhost:5432/edufund
-JWT_SECRET=replace_me_with_a_strong_secret
-FLASK_APP=backend.app:create_app
-FLASK_RUN_PORT=5000
+### Adding Test Data
+```bash
+node add-test-user.js          # Add test users
+node seed-sample-data.js       # Add sample campaigns
 ```
 
-### Dev Setup
-1) Create venv and install deps
-```
-python -m venv .venv
-.\.venv\Scripts\activate   # Windows
-pip install -r backend/requirements.txt
-```
-
-2) Init DB migrations (first time)
-```
-flask db init
-flask db migrate -m "initial tables"
-flask db upgrade
+### Testing Features
+```bash
+node test-admin-functionality.js    # Test admin features
+node test-campaign-review.js        # Test review workflow
+node test-favorites.js              # Test favorites system
 ```
 
-3) Seed demo data
-```
-python backend/seed.py
-```
-
-4) Run backend
-```
-flask run
-# Serves http://localhost:5000
+### Database Management
+```bash
+node create-database.js        # Create database
+node initialize-tables.js      # Create tables
+node setup-profile-tables.js   # Setup profile tables
 ```
 
-### Dev Proxy (Vite)
-- `/api` is proxied to Flask at `http://localhost:5000` (see `vite.config.mjs`).
+## Environment Configuration
 
-### API Endpoints (Preserved)
-- `POST /api/auth/login`, `POST /api/auth/register`
-- `GET /api/campaigns`, `POST /api/campaigns`, `GET /api/campaigns/:id`
-- `GET /api/campaigns/:id/donations`, `POST /api/donations`
-- `GET /api/campaigns/:id/updates`, `POST /api/campaigns/:id/updates`
-- `GET /api/campaigns/:id/comments`, `POST /api/campaigns/:id/comments`
-- `GET /api/favorites`, `POST /api/favorites/:campaignId`, `DELETE /api/favorites/:campaignId`
-- `GET /api/analytics/campaign/:id`, `GET /api/analytics/student/:userId`
+The application supports different environments through the `.env` file:
 
-### Notes
-- Field names (e.g., `goalAmount`, `raisedAmount`, `image`) match the existing UI.
-- Favorites require JWT (`Authorization: Bearer <token>`). Other endpoints accept public access similar to the current behavior.
-- Add indexes/constraints via migrations as needed for production.
+- **Development**: Full logging, CORS enabled, hot reload
+- **Production**: Optimized build, secure configurations
 
+## Security Features
 
+- **JWT Authentication**: Secure token-based auth
+- **Password Hashing**: Bcrypt password encryption
+- **SQL Injection Protection**: Parameterized queries
+- **CORS Configuration**: Controlled cross-origin access
+- **File Upload Validation**: Image type and size restrictions
+- **Role-based Access Control**: Protected admin routes
 
+## Browser Support
 
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
 
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## Documentation
+
+Additional documentation available:
+- [Admin System Documentation](ADMIN_SYSTEM_DOCUMENTATION.md)
+- [Campaign Review Workflow](CAMPAIGN_REVIEW_WORKFLOW.md)
+- [Complete API Reference](COMPLETE_API_REFERENCE.md)
+- [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
+- [GoFundMe Feature Comparison](GOFUNDME_FEATURE_COMPARISON.md)
+- [Donor Wall Feature](DONOR_WALL_FEATURE.md)
+- [Milestone Celebrations](MILESTONE_CELEBRATIONS_FEATURE.md)
+
+## Troubleshooting
+
+### Database Connection Issues
+- Verify MySQL is running
+- Check database credentials in `.env`
+- Ensure database exists: `node create-database.js`
+
+### Frontend Cannot Connect to Backend
+- Ensure backend is running on port 5000
+- Check Vite proxy configuration in `vite.config.mjs`
+- Verify CORS settings in `server.js`
+
+### Image Upload Failures
+- Check `uploads/campaigns/` directory exists
+- Verify write permissions
+- Ensure file size is under limit
+
+## License
+
+This project is licensed under the ISC License.
+
+## Support
+
+For issues and questions:
+- GitHub Issues: https://github.com/lkiwan/edufund/issues
+- Email: omar.arhoune@gmail.com
+
+## Acknowledgments
+
+Built with modern web technologies and best practices for educational crowdfunding.
