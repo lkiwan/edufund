@@ -1,0 +1,2679 @@
+const express = require('express');
+const path = require('path');
+const cors = require('cors');
+const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
+require('dotenv').config();
+
+// Initialize database (MySQL pool)
+const pool = require('./src/db/init-db');
+
+// Initialize upload service
+const { uploadSingle, uploadMultiple, processImage } = require('./upload-service');
+
+// Initialize profile routes
+const profileRoutes = require('./routes/profileRoutes')(pool);
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Rate limiting middleware - Protect API endpoints from abuse
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // TEMPORARILY INCREASED - Limit each IP to 1000 requests per windowMs (was 100)
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+// Apply rate limiting to all API routes
+app.use('/api/', apiLimiter);
+
+// Serve static files from the build directory
+app.use(express.static(path.join(__dirname, 'build')));
+
+// Serve uploaded images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Helper function to execute queries
+async function query(sql, params = []) {
+  const [rows] = await pool.execute(sql, params);
+  return rows;
+}
+
+// ==== AUTH ENDPOINTS ====
+
+// Auth: Login
+app.post('/api/auth/login', async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+
+  try {
+    const users = await query('SELECT * FROM users WHERE email = ?', [email]);
+    if (users.length === 0) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const user = users[0];
+    const isValid = bcrypt.compareSync(password, user.password);
+    if (!isValid) return res.status(401).json({ error: 'Invalid credentials' });
+
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ success: true, user: userWithoutPassword });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Auth: Register
+app.post('/api/auth/register', async (req, res) => {
+  const { email, password, role } = req.body || {};
+
+  console.log('Registration attempt:', { email, role, hasPassword: !!password });
+
+  if (!email || !password) {
+    console.log('Missing fields in registration');
+    return res.status(400).json({ error: 'Missing fields' });
+  }
+
+  try {
+    // Check if user exists
+    const existing = await query('SELECT * FROM users WHERE email = ?', [email]);
+    if (existing.length > 0) {
+      console.log('Email already registered:', email);
+      return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    // Hash password
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(password, salt);
+
+    // Insert user
+    const result = await query(
+      'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
+      [email, hashedPassword, role || 'student']
+    );
+
+    const newUser = {
+      id: result.insertId,
+      email,
+      role: role || 'student'
+    };
+
+    console.log('User registered successfully:', newUser.email);
+    res.json({ success: true, user: newUser });
+  } catch (err) {
+    console.error('Registration error details:', err.message);
+    console.error('Full error:', err);
+    res.status(500).json({ error: 'Server error: ' + err.message });
+  }
+});
+
+// ==== IMAGE UPLOAD ENDPOINTS ====
+
+// Upload campaign image
+app.post('/api/upload/campaign-image', uploadSingle, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Process the image (resize and create thumbnail)
+    const processed = await processImage(req.file.path, {
+      width: 1200,
+      height: 800,
+      quality: 85,
+      createThumbnail: true
+    });
+
+    // Return the file path relative to uploads directory
+    const filename = path.basename(processed.path);
+    const thumbnailFilename = processed.thumbnail ? path.basename(processed.thumbnail) : null;
+
+    res.json({
+      success: true,
+      filename: filename,
+      url: `/uploads/campaigns/${filename}`,
+      thumbnail: thumbnailFilename ? `/uploads/campaigns/${thumbnailFilename}` : null
+    });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
+
+// Upload multiple images
+app.post('/api/upload/campaign-images', uploadMultiple, async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files uploaded' });
+    }
+
+    // Process all images
+    const processedFiles = await Promise.all(
+      req.files.map(async (file) => {
+        const processed = await processImage(file.path, {
+          width: 1200,
+          height: 800,
+          quality: 85,
+          createThumbnail: true
+        });
+
+        const filename = path.basename(processed.path);
+        const thumbnailFilename = processed.thumbnail ? path.basename(processed.thumbnail) : null;
+
+        return {
+          filename: filename,
+          url: `/uploads/campaigns/${filename}`,
+          thumbnail: thumbnailFilename ? `/uploads/campaigns/${thumbnailFilename}` : null
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      files: processedFiles
+    });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Failed to upload images' });
+  }
+});
+
+// ==== CAMPAIGN ENDPOINTS ====
+
+// Create Campaign
+app.post('/api/campaigns', async (req, res) => {
+  try {
+    const { title, description, goal, category, location, university, images, userId, featured } = req.body || {};
+    if (!title || !description || !goal) {
+      return res.status(400).json({ error: 'Missing required fields (title, description, goal)' });
+    }
+
+    const result = await query(
+      `INSERT INTO campaigns (title, description, goal_amount, category, city, university, cover_image, status, user_id, featured)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`,
+      [title, description, Number(goal), category || null, location || null, university || null, images?.coverName || null, userId || null, featured ? 1 : 0]
+    );
+
+    // Initialize metrics row
+    await query('INSERT IGNORE INTO campaign_metrics (campaign_id) VALUES (?)', [result.insertId]);
+
+    res.json({ success: true, campaignId: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// List Campaigns with filters, pagination, featured
+app.get('/api/campaigns', async (req, res) => {
+  try {
+    const {
+      search, location, university, category, status, sort, page = 1, limit = 6, featured,
+      fundingPercentage, timeRemaining, minAmount, maxAmount
+    } = req.query || {};
+    const where = [];
+    const params = [];
+    const having = [];
+
+    // IMPORTANT: Only show published campaigns in public listings (unless status is explicitly provided)
+    if (!status) {
+      where.push('c.status = ?');
+      params.push('published');
+    } else {
+      where.push('c.status = ?');
+      params.push(status);
+    }
+
+    if (search) {
+      where.push('(c.title LIKE ? OR c.description LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`);
+    }
+    if (category) {
+      where.push('c.category = ?');
+      params.push(category);
+    }
+    if (location) {
+      where.push('c.city = ?');
+      params.push(location);
+    }
+    if (university) {
+      where.push('c.university = ?');
+      params.push(university);
+    }
+    if (featured === 'true') {
+      where.push('c.featured = 1');
+    }
+
+    // Amount range filters
+    if (minAmount) {
+      where.push('c.goal_amount >= ?');
+      params.push(Number(minAmount));
+    }
+    if (maxAmount) {
+      where.push('c.goal_amount <= ?');
+      params.push(Number(maxAmount));
+    }
+
+    // Time remaining filter (based on end_date)
+    if (timeRemaining) {
+      const now = new Date();
+      if (timeRemaining === 'ending-soon') {
+        // Ending in 7 days
+        const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        where.push('c.end_date IS NOT NULL AND c.end_date <= ?');
+        params.push(sevenDaysLater.toISOString().slice(0, 19).replace('T', ' '));
+      } else if (timeRemaining === 'this-week') {
+        // Ending this week (next 7 days)
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        where.push('c.end_date IS NOT NULL AND c.end_date <= ?');
+        params.push(nextWeek.toISOString().slice(0, 19).replace('T', ' '));
+      } else if (timeRemaining === 'this-month') {
+        // Ending this month (next 30 days)
+        const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        where.push('c.end_date IS NOT NULL AND c.end_date <= ?');
+        params.push(nextMonth.toISOString().slice(0, 19).replace('T', ' '));
+      }
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    // Sorting options
+    let orderSql = 'ORDER BY c.created_at DESC';
+    if (sort === 'goal') orderSql = 'ORDER BY c.goal_amount DESC';
+    if (sort === 'raised') orderSql = 'ORDER BY c.current_amount DESC';
+    if (sort === 'ending-soon') orderSql = 'ORDER BY c.end_date ASC';
+    if (sort === 'most-funded') orderSql = 'ORDER BY (c.current_amount / c.goal_amount) DESC';
+    if (sort === 'most-donors') orderSql = 'ORDER BY donor_count DESC';
+
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.max(1, parseInt(limit) || 6);
+    const offset = (pageNum - 1) * limitNum;
+
+    // Query with donor count for sorting
+    const sql = `
+      SELECT c.id, c.title, c.description, c.goal_amount, c.current_amount, c.category, c.city,
+             c.university, c.cover_image, c.status, c.created_at, c.end_date,
+             COUNT(DISTINCT d.id) as donor_count
+      FROM campaigns c
+      LEFT JOIN donations d ON c.id = d.campaign_id
+      ${whereSql}
+      GROUP BY c.id
+      ${orderSql}
+      LIMIT ${limitNum} OFFSET ${offset}
+    `;
+
+    const rows = await query(sql, params);
+
+    // For funding percentage filter, we need to filter after the query
+    let filteredRows = rows;
+    if (fundingPercentage) {
+      filteredRows = rows.filter(r => {
+        const percentage = (r.current_amount / r.goal_amount) * 100;
+        if (fundingPercentage === '0-25') return percentage >= 0 && percentage < 25;
+        if (fundingPercentage === '25-50') return percentage >= 25 && percentage < 50;
+        if (fundingPercentage === '50-75') return percentage >= 50 && percentage < 75;
+        if (fundingPercentage === '75-100') return percentage >= 75 && percentage < 100;
+        if (fundingPercentage === '100+') return percentage >= 100;
+        return true;
+      });
+    }
+
+    // Get total count for pagination
+    const totalRows = await query(`
+      SELECT COUNT(DISTINCT c.id) as c
+      FROM campaigns c
+      LEFT JOIN donations d ON c.id = d.campaign_id
+      ${whereSql}
+    `, params);
+    const total = totalRows[0].c;
+
+    const campaigns = filteredRows.map(r => {
+      const created = new Date(r.created_at);
+      const end = r.end_date ? new Date(r.end_date) : null;
+      let daysLeft = 0;
+      if (end) {
+        daysLeft = Math.max(0, Math.ceil((end - Date.now()) / (1000*60*60*24)));
+      } else {
+        const defaultEnd = new Date(created.getTime() + 30*24*60*60*1000);
+        daysLeft = Math.max(0, Math.ceil((defaultEnd - Date.now()) / (1000*60*60*24)));
+      }
+      return {
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        goalAmount: r.goal_amount,
+        currentAmount: r.current_amount,  // Added for consistency with details endpoint
+        raisedAmount: r.current_amount,   // Keep for backward compatibility
+        category: r.category,
+        city: r.city,
+        university: r.university,
+        image: r.cover_image,
+        coverImage: r.cover_image,  // Added for consistency with details endpoint
+        imageAlt: r.title,
+        daysLeft,
+        isVerified: r.status === 'active' || r.status === 'verified',
+        isUrgent: r.status === 'urgent',
+        status: r.status
+      };
+    });
+
+    const hasMore = offset + campaigns.length < total;
+
+    res.json({ success: true, campaigns, hasMore, total });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Campaign Details
+app.get('/api/campaigns/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rows = await query('SELECT * FROM campaigns WHERE id = ?', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
+
+    const r = rows[0];
+
+    const metricsRows = await query('SELECT * FROM campaign_metrics WHERE campaign_id = ?', [id]);
+    const metrics = metricsRows[0] || { view_count: 0, share_count: 0, updates_posted: 0 };
+
+    const donorCountRows = await query('SELECT COUNT(*) as c FROM donations WHERE campaign_id = ?', [id]);
+    const donorCount = donorCountRows[0].c || 0;
+
+    const campaign = {
+      id: r.id,
+      title: r.title,
+      story: r.description,
+      description: r.description,
+      image: r.cover_image,
+      coverImage: r.cover_image,
+      imageAlt: r.title,
+      raisedAmount: r.current_amount,
+      currentAmount: r.current_amount,
+      goalAmount: r.goal_amount,
+      category: r.category,
+      city: r.city,
+      university: r.university,
+      donorCount,
+      deadline: r.end_date,
+      isVerified: r.status === 'active' || r.status === 'verified',
+      verificationStatus: r.verification_status || 'unverified',
+      status: r.status,
+      viewCount: metrics.view_count || 0,
+      shareCount: metrics.share_count || 0,
+      studentName: r.student_name,
+      studentAvatar: r.student_avatar,
+      student: r.student_name ? {
+        name: r.student_name,
+        avatar: r.student_avatar,
+        avatarAlt: r.student_name,
+        university: r.student_university || r.university,
+        field: r.student_field || '',
+        year: r.student_year || ''
+      } : null,
+      gallery: [],
+      documents: []
+    };
+
+    res.json({ success: true, campaign });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update Campaign
+app.put('/api/campaigns/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { title, description, goalAmount, category, city, university, coverImage, status } = req.body || {};
+
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+
+    if (title !== undefined) {
+      updates.push('title = ?');
+      params.push(title);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      params.push(description);
+    }
+    if (goalAmount !== undefined) {
+      updates.push('goal_amount = ?');
+      params.push(Number(goalAmount));
+    }
+    if (category !== undefined) {
+      updates.push('category = ?');
+      params.push(category);
+    }
+    if (city !== undefined) {
+      updates.push('city = ?');
+      params.push(city);
+    }
+    if (university !== undefined) {
+      updates.push('university = ?');
+      params.push(university);
+    }
+    if (coverImage !== undefined) {
+      updates.push('cover_image = ?');
+      params.push(coverImage);
+    }
+    if (status !== undefined) {
+      updates.push('status = ?');
+      params.push(status);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    params.push(id);
+    await query(`UPDATE campaigns SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    res.json({ success: true, message: 'Campaign updated successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Campaign Donations list
+app.get('/api/campaigns/:id/donations', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rows = await query(
+      `SELECT donor_name, amount, donor_message, is_anonymous, created_at
+       FROM donations WHERE campaign_id = ? ORDER BY created_at DESC`,
+      [id]
+    );
+
+    const donors = rows.map(d => ({
+      id: `${id}-${d.created_at}`,
+      name: d.is_anonymous ? 'Anonymous Donor' : (d.donor_name || 'Donor'),
+      avatar: '',
+      avatarAlt: '',
+      amount: d.amount,
+      message: d.donor_message || '',
+      isAnonymous: !!d.is_anonymous,
+      country: 'MA',
+      createdAt: d.created_at
+    }));
+
+    res.json({ success: true, donations: donors });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get donor wall data for a campaign
+app.get('/api/campaigns/:id/donor-wall', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    // Get top donors (highest amounts)
+    const topDonors = await query(
+      `SELECT
+        donor_name,
+        SUM(amount) as total_amount,
+        COUNT(*) as donation_count,
+        MIN(created_at) as first_donation,
+        is_anonymous
+       FROM donations
+       WHERE campaign_id = ?
+       GROUP BY donor_name, is_anonymous
+       ORDER BY total_amount DESC
+       LIMIT 5`,
+      [id]
+    );
+
+    // Get recent donors (most recent donations)
+    const recentDonors = await query(
+      `SELECT
+        donor_name,
+        amount,
+        created_at,
+        is_anonymous
+       FROM donations
+       WHERE campaign_id = ?
+       ORDER BY created_at DESC
+       LIMIT 5`,
+      [id]
+    );
+
+    // Get first donor (earliest donation)
+    const [firstDonor] = await query(
+      `SELECT
+        donor_name,
+        amount,
+        created_at,
+        is_anonymous
+       FROM donations
+       WHERE campaign_id = ?
+       ORDER BY created_at ASC
+       LIMIT 1`,
+      [id]
+    );
+
+    // Get donor statistics
+    const [stats] = await query(
+      `SELECT
+        COUNT(DISTINCT donor_name) as unique_donors,
+        COUNT(*) as total_donations,
+        AVG(amount) as average_donation,
+        SUM(amount) as total_raised
+       FROM donations
+       WHERE campaign_id = ?`,
+      [id]
+    );
+
+    const donorWall = {
+      topDonors: topDonors.map((d, index) => ({
+        rank: index + 1,
+        name: d.is_anonymous ? 'Anonymous Donor' : (d.donor_name || 'Donor'),
+        totalAmount: d.total_amount,
+        donationCount: d.donation_count,
+        firstDonation: d.first_donation,
+        isAnonymous: !!d.is_anonymous,
+        badge: index === 0 ? 'Top Donor' : null
+      })),
+      recentDonors: recentDonors.map(d => ({
+        name: d.is_anonymous ? 'Anonymous Donor' : (d.donor_name || 'Donor'),
+        amount: d.amount,
+        createdAt: d.created_at,
+        isAnonymous: !!d.is_anonymous
+      })),
+      firstDonor: firstDonor ? {
+        name: firstDonor.is_anonymous ? 'Anonymous Donor' : (firstDonor.donor_name || 'Donor'),
+        amount: firstDonor.amount,
+        createdAt: firstDonor.created_at,
+        isAnonymous: !!firstDonor.is_anonymous,
+        badge: 'First Donor'
+      } : null,
+      statistics: {
+        uniqueDonors: stats?.unique_donors || 0,
+        totalDonations: stats?.total_donations || 0,
+        averageDonation: stats?.average_donation || 0,
+        totalRaised: stats?.total_raised || 0
+      }
+    };
+
+    res.json({ success: true, donorWall });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get donations by user email
+app.get('/api/donations/by-email/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    const rows = await query(
+      `SELECT d.id, d.campaign_id, d.amount, d.donor_message, d.created_at, d.receipt_sent,
+              c.title as campaign_title, c.cover_image, c.student_name,
+              dr.receipt_number
+       FROM donations d
+       LEFT JOIN campaigns c ON d.campaign_id = c.id
+       LEFT JOIN donation_receipts dr ON d.id = dr.donation_id
+       WHERE d.donor_email = ?
+       ORDER BY d.created_at DESC`,
+      [email]
+    );
+
+    const donations = rows.map(d => ({
+      id: d.id,
+      campaignId: d.campaign_id,
+      campaignTitle: d.campaign_title || 'Untitled Campaign',
+      studentName: d.student_name || 'Student',
+      amount: d.amount,
+      message: d.donor_message,
+      date: d.created_at,
+      status: 'completed',
+      receiptNumber: d.receipt_number,
+      receiptSent: !!d.receipt_sent,
+      coverImage: d.cover_image
+    }));
+
+    res.json({ success: true, donations, total: donations.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// DEBUG: Get all recent donations with emails (temporary)
+app.get('/api/donations/debug/all-emails', async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT id, campaign_id, donor_name, donor_email, amount, is_anonymous, created_at
+       FROM donations
+       ORDER BY created_at DESC
+       LIMIT 20`
+    );
+    res.json({ success: true, donations: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Create Donation with tip and auto-receipt
+app.post('/api/donations', async (req, res) => {
+  let connection;
+  try {
+    const { campaignId, amount, donorName, donorEmail, message, isAnonymous, tipAmount, paymentMethod } = req.body || {};
+    if (!campaignId || !amount) return res.status(400).json({ error: 'campaignId and amount are required' });
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Insert donation
+    const [donationResult] = await connection.execute(
+      `INSERT INTO donations (campaign_id, donor_name, donor_email, donor_message, is_anonymous, amount, tip_amount, payment_method, status, receipt_sent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed', 1)`,
+      [Number(campaignId), donorName || null, donorEmail || null, message || null, isAnonymous ? 1 : 0, Number(amount), tipAmount ? Number(tipAmount) : 0, paymentMethod || 'card']
+    );
+
+    const donationId = donationResult.insertId;
+
+    // Update campaign total
+    await connection.execute(
+      'UPDATE campaigns SET current_amount = current_amount + ? WHERE id = ?',
+      [Number(amount), Number(campaignId)]
+    );
+
+    // Auto-generate receipt
+    const receiptNumber = `RCP-${Date.now()}-${donationId}`;
+    await connection.execute(
+      'INSERT INTO donation_receipts (donation_id, receipt_number, tax_deductible) VALUES (?, ?, 0)',
+      [donationId, receiptNumber]
+    );
+
+    // Queue notification email to campaign owner
+    const [campaignRows] = await connection.execute('SELECT user_id, title FROM campaigns WHERE id = ?', [campaignId]);
+    if (campaignRows.length > 0 && campaignRows[0].user_id) {
+      const [ownerRows] = await connection.execute('SELECT email FROM users WHERE id = ?', [campaignRows[0].user_id]);
+      if (ownerRows.length > 0) {
+        const donorDisplay = isAnonymous ? 'Anonymous' : (donorName || 'A supporter');
+        await connection.execute(
+          'INSERT INTO email_notifications (user_id, email, subject, body, type) VALUES (?, ?, ?, ?, \'donation\')',
+          [
+            campaignRows[0].user_id,
+            ownerRows[0].email,
+            `New donation received for ${campaignRows[0].title}`,
+            `${donorDisplay} just donated $${amount} to your campaign "${campaignRows[0].title}". ${message ? 'Message: ' + message : ''}`
+          ]
+        );
+      }
+    }
+
+    await connection.commit();
+    res.json({ success: true, donationId, receiptNumber });
+  } catch (err) {
+    if (connection) await connection.rollback();
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  } finally {
+    if (connection) connection.release();
+  }
+});
+
+// Campaign Updates (GET/POST)
+app.get('/api/campaigns/:id/updates', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rows = await query(
+      `SELECT cu.id, cu.title, cu.content, cu.image_url, cu.created_at, u.email as author_email
+       FROM campaign_updates cu LEFT JOIN users u ON cu.user_id = u.id
+       WHERE cu.campaign_id = ? ORDER BY cu.created_at DESC`,
+      [id]
+    );
+
+    const updates = rows.map(u => ({
+      id: u.id,
+      title: u.title || null,
+      content: u.content,
+      image: u.image_url || null,
+      postedBy: u.author_email || 'Student',
+      createdAt: u.created_at
+    }));
+
+    res.json({ success: true, updates });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/campaigns/:id/updates', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { userId, title, content, imageUrl } = req.body || {};
+    if (!content) return res.status(400).json({ error: 'content is required' });
+
+    const result = await query(
+      'INSERT INTO campaign_updates (campaign_id, user_id, title, content, image_url) VALUES (?, ?, ?, ?, ?)',
+      [id, userId || null, title || null, content, imageUrl || null]
+    );
+
+    // Bump metrics
+    await query('UPDATE campaign_metrics SET updates_posted = updates_posted + 1, last_updated = CURRENT_TIMESTAMP WHERE campaign_id = ?', [id]);
+
+    res.json({ success: true, updateId: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Campaign Comments (GET/POST)
+app.get('/api/campaigns/:id/comments', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const rows = await query(
+      'SELECT id, author_name, content, created_at FROM campaign_comments WHERE campaign_id = ? ORDER BY created_at DESC',
+      [id]
+    );
+
+    const comments = rows.map(c => ({ id: c.id, author: c.author_name || 'Supporter', content: c.content, createdAt: c.created_at }));
+    res.json({ success: true, comments });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/campaigns/:id/comments', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { userId, authorName, content } = req.body || {};
+    if (!content) return res.status(400).json({ error: 'content is required' });
+
+    const result = await query(
+      'INSERT INTO campaign_comments (campaign_id, user_id, author_name, content) VALUES (?, ?, ?, ?)',
+      [id, userId || null, authorName || null, content]
+    );
+
+    res.json({ success: true, commentId: result.insertId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Favorites
+app.post('/api/campaigns/:id/favorite', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { userId, action } = req.body || {};
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+
+    if (action === 'remove') {
+      await query('DELETE FROM favorites WHERE user_id = ? AND campaign_id = ?', [userId, id]);
+      return res.json({ success: true, favorited: false });
+    } else {
+      await query('INSERT IGNORE INTO favorites (user_id, campaign_id) VALUES (?, ?)', [userId, id]);
+      return res.json({ success: true, favorited: true });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.get('/api/users/:id/favorites', async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const rows = await query(
+      `SELECT c.id, c.title, c.cover_image, c.university, c.city, c.category
+       FROM favorites f INNER JOIN campaigns c ON f.campaign_id = c.id
+       WHERE f.user_id = ? ORDER BY f.created_at DESC`,
+      [userId]
+    );
+
+    const favorites = rows.map(r => ({ id: r.id, title: r.title, image: r.cover_image, university: r.university, city: r.city, category: r.category }));
+    res.json({ success: true, favorites });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Check if campaign is favorited by user
+app.get('/api/campaigns/:id/favorite/check', async (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.json({ success: true, isFavorited: false });
+    }
+
+    const rows = await query(
+      'SELECT id FROM favorites WHERE user_id = ? AND campaign_id = ?',
+      [Number(userId), campaignId]
+    );
+
+    res.json({ success: true, isFavorited: rows.length > 0 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Metrics
+app.post('/api/campaigns/:id/view', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await query('INSERT IGNORE INTO campaign_metrics (campaign_id) VALUES (?)', [id]);
+    await query('UPDATE campaign_metrics SET view_count = view_count + 1 WHERE campaign_id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/api/campaigns/:id/share', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await query('INSERT IGNORE INTO campaign_metrics (campaign_id) VALUES (?)', [id]);
+    await query('UPDATE campaign_metrics SET share_count = share_count + 1 WHERE campaign_id = ?', [id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Campaign Review Workflow
+// Submit campaign for review (student action)
+app.post('/api/campaigns/:id/submit', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { userId } = req.body || {};
+
+    // Check if campaign exists and belongs to user
+    const [campaign] = await query('SELECT id, user_id, status FROM campaigns WHERE id = ?', [id]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    if (campaign.user_id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    if (campaign.status === 'pending') {
+      return res.json({ success: true, message: 'Campaign already submitted for review' });
+    }
+
+    // Update status to pending
+    await query('UPDATE campaigns SET status = ?, updated_at = NOW() WHERE id = ?', ['pending', id]);
+
+    // Log status history if table exists
+    try {
+      await query(
+        'INSERT INTO campaign_status_history (campaign_id, old_status, new_status, changed_by, reason) VALUES (?, ?, ?, ?, ?)',
+        [id, campaign.status, 'pending', userId, 'Campaign submitted for admin review']
+      );
+    } catch (err) {
+      // Table might not exist, ignore
+      console.log('campaign_status_history table not found, skipping');
+    }
+
+    res.json({ success: true, message: 'Campaign submitted for review' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user's own campaigns (student dashboard)
+app.get('/api/users/:userId/campaigns', async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+
+    const rows = await query(
+      `SELECT id, title, description, goal_amount, current_amount, category, city, university,
+              cover_image, status, created_at, end_date, featured
+       FROM campaigns
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const campaigns = rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      goalAmount: r.goal_amount,
+      currentAmount: r.current_amount,
+      category: r.category,
+      city: r.city,
+      university: r.university,
+      coverImage: r.cover_image,
+      status: r.status,
+      createdAt: r.created_at,
+      endDate: r.end_date,
+      featured: r.featured === 1
+    }));
+
+    res.json({ success: true, campaigns });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Analytics
+app.get('/api/analytics/campaign/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const totalsRows = await query('SELECT SUM(amount) as totalRaised, COUNT(*) as donors FROM donations WHERE campaign_id = ?', [id]);
+    const metricsRows = await query('SELECT * FROM campaign_metrics WHERE campaign_id = ?', [id]);
+
+    const totals = totalsRows[0] || { totalRaised: 0, donors: 0 };
+    const metrics = metricsRows[0] || { view_count: 0, share_count: 0, updates_posted: 0 };
+
+    res.json({ success: true, data: {
+      totalRaised: totals.totalRaised || 0,
+      donors: totals.donors || 0,
+      views: metrics.view_count || 0,
+      shares: metrics.share_count || 0,
+      updatesPosted: metrics.updates_posted || 0
+    }});
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Student Analytics (protected - simplified version without middleware)
+app.get('/api/analytics/student/:userId', async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+
+    // Get all campaigns for this student
+    const campaigns = await query('SELECT id FROM campaigns WHERE user_id = ?', [userId]);
+    if (campaigns.length === 0) {
+      return res.json({
+        totalRaised: 0,
+        totalDonors: 0,
+        campaignViews: 0,
+        shares: 0,
+        updatesPosted: 0
+      });
+    }
+
+    const campaignIds = campaigns.map(c => c.id);
+    const placeholders = campaignIds.map(() => '?').join(',');
+
+    const totalsRows = await query(`SELECT SUM(amount) as totalRaised, COUNT(*) as totalDonors FROM donations WHERE campaign_id IN (${placeholders})`, campaignIds);
+    const metricsRows = await query(`SELECT SUM(view_count) as views, SUM(share_count) as shares, SUM(updates_posted) as updates FROM campaign_metrics WHERE campaign_id IN (${placeholders})`, campaignIds);
+
+    const totals = totalsRows[0] || { totalRaised: 0, totalDonors: 0 };
+    const metrics = metricsRows[0] || { views: 0, shares: 0, updates: 0 };
+
+    res.json({
+      totalRaised: totals.totalRaised || 0,
+      totalDonors: totals.totalDonors || 0,
+      campaignViews: metrics.views || 0,
+      shares: metrics.shares || 0,
+      updatesPosted: metrics.updates || 0
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==== HOMEPAGE STATS ====
+
+// Homepage Statistics (Real-time data for ultra-professional display)
+app.get('/api/stats/homepage', async (req, res) => {
+  try {
+    // Total campaigns count
+    const campaignsCountRows = await query('SELECT COUNT(*) as count FROM campaigns WHERE status IN ("active", "published", "completed")');
+    const totalCampaigns = campaignsCountRows[0].count;
+
+    // Total amount raised
+    const totalRaisedRows = await query('SELECT COALESCE(SUM(current_amount), 0) as total FROM campaigns');
+    const totalRaised = totalRaisedRows[0].total;
+
+    // Total students supported (unique campaigns)
+    const studentsRows = await query('SELECT COUNT(DISTINCT id) as count FROM campaigns WHERE status IN ("active", "published", "completed")');
+    const totalStudents = studentsRows[0].count;
+
+    // Total donors (unique donor emails from donations table)
+    const donorsRows = await query('SELECT COUNT(DISTINCT donor_email) as count FROM donations WHERE donor_email IS NOT NULL');
+    const totalDonors = donorsRows[0].count;
+
+    res.json({
+      success: true,
+      stats: {
+        totalCampaigns,
+        totalRaised,
+        totalStudents,
+        totalDonors
+      }
+    });
+  } catch (err) {
+    console.error('Error fetching homepage stats:', err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==== GLOBAL ANALYTICS ====
+
+// Global Statistics
+app.get('/api/analytics/global', async (req, res) => {
+  try {
+    const { timeRange = 'all', userId } = req.query;
+
+    // Calculate date filter
+    let dateFilter = '';
+    if (timeRange === 'week') {
+      dateFilter = 'AND c.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+    } else if (timeRange === 'month') {
+      dateFilter = 'AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+    }
+
+    // Add user filter if userId is provided (for students to see only their campaigns)
+    let userFilter = '';
+    if (userId) {
+      userFilter = `AND c.user_id = ${parseInt(userId)}`;
+    }
+
+    // Total collected
+    const totalRows = await query(`SELECT COALESCE(SUM(current_amount), 0) as total FROM campaigns c WHERE 1=1 ${dateFilter} ${userFilter}`);
+    const totalCollected = totalRows[0].total;
+
+    // Students supported (unique campaigns with donations)
+    const studentsRows = await query(`SELECT COUNT(DISTINCT campaign_id) as count FROM donations d JOIN campaigns c ON d.campaign_id = c.id WHERE 1=1 ${dateFilter} ${userFilter}`);
+    const studentsSupported = studentsRows[0].count;
+
+    // Active campaigns
+    const activeRows = await query(`SELECT COUNT(*) as count FROM campaigns c WHERE status = 'active' ${dateFilter} ${userFilter}`);
+    const activeCampaigns = activeRows[0].count;
+
+    // Average completion
+    const completionRows = await query(`
+      SELECT AVG(CASE WHEN goal_amount > 0 THEN (current_amount / goal_amount) * 100 ELSE 0 END) as avg_completion
+      FROM campaigns c WHERE goal_amount > 0 ${dateFilter} ${userFilter}
+    `);
+    const averageCompletion = Math.round(completionRows[0].avg_completion || 0);
+
+    // Total donors
+    const donorsRows = await query(`SELECT COUNT(*) as count FROM donations d JOIN campaigns c ON d.campaign_id = c.id WHERE 1=1 ${dateFilter} ${userFilter}`);
+    const totalDonors = donorsRows[0].count;
+
+    // Average donation
+    const avgDonationRows = await query(`SELECT AVG(amount) as avg_amount FROM donations d JOIN campaigns c ON d.campaign_id = c.id WHERE 1=1 ${dateFilter} ${userFilter}`);
+    const averageDonation = avgDonationRows[0].avg_amount || 0;
+
+    // By field
+    const byField = await query(`
+      SELECT category, COUNT(*) as count, SUM(current_amount) as total
+      FROM campaigns c WHERE category IS NOT NULL ${dateFilter} ${userFilter}
+      GROUP BY category ORDER BY total DESC LIMIT 10
+    `);
+
+    // By region
+    const byRegion = await query(`
+      SELECT city, COUNT(*) as count, SUM(current_amount) as total
+      FROM campaigns c WHERE city IS NOT NULL ${dateFilter} ${userFilter}
+      GROUP BY city ORDER BY total DESC LIMIT 10
+    `);
+
+    // Recent campaigns
+    const recentCampaigns = await query(`
+      SELECT id, title, category, city, goal_amount, current_amount, created_at
+      FROM campaigns c WHERE 1=1 ${dateFilter} ${userFilter}
+      ORDER BY created_at DESC LIMIT 10
+    `);
+
+    res.json({
+      success: true,
+      stats: {
+        totalCollected,
+        studentsSupported,
+        activeCampaigns,
+        averageCompletion,
+        totalDonors,
+        averageDonation,
+      },
+      byField,
+      byRegion,
+      recentCampaigns,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ==== EXPORT & AUTOMATION ====
+
+// CSV Export
+app.get('/api/export/campaigns-csv', async (req, res) => {
+  try {
+    const campaigns = await query(`
+      SELECT id, title, description, category, city, university,
+             goal_amount, current_amount, status, created_at
+      FROM campaigns ORDER BY created_at DESC
+    `);
+
+    // Create CSV
+    const headers = ['ID', 'Title', 'Category', 'City', 'University', 'Goal (MAD)', 'Raised (MAD)', 'Status', 'Created'];
+    const rows = campaigns.map(c => [
+      c.id,
+      `"${(c.title || '').replace(/"/g, '""')}"`,
+      c.category || '',
+      c.city || '',
+      c.university || '',
+      c.goal_amount || 0,
+      c.current_amount || 0,
+      c.status || '',
+      new Date(c.created_at).toISOString().split('T')[0],
+    ]);
+
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=campaigns.csv');
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Export error' });
+  }
+});
+
+// PDF Receipt Generation
+app.get('/api/export/receipt/:donationId', async (req, res) => {
+  try {
+    const { jsPDF } = require('jspdf');
+    const autoTable = require('jspdf-autotable').default;
+    const donationId = req.params.donationId;
+
+    // Fetch donation details
+    const donations = await query(`
+      SELECT d.id, d.amount, d.donor_name, d.donor_email, d.donor_message, d.created_at,
+             c.title as campaign_title, c.student_name, c.category, c.university, c.city,
+             dr.receipt_number
+      FROM donations d
+      LEFT JOIN campaigns c ON d.campaign_id = c.id
+      LEFT JOIN donation_receipts dr ON d.id = dr.donation_id
+      WHERE d.id = ?
+    `, [donationId]);
+
+    if (donations.length === 0) {
+      return res.status(404).json({ error: 'Donation not found' });
+    }
+
+    const donation = donations[0];
+
+    // Currency conversion using live rates
+    const currencyService = require('./currency-service');
+    const conversionResult = await currencyService.convertMADToMultiple(donation.amount);
+    const amountUSD = conversionResult.USD;
+    const amountEUR = conversionResult.EUR;
+    const rateUSD = conversionResult.rates.MAD_USD.toFixed(4);
+    const rateEUR = conversionResult.rates.MAD_EUR.toFixed(4);
+
+    // Create PDF
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Professional Header with Badge/Logo
+    doc.setFillColor(16, 185, 129); // Primary green
+    doc.rect(0, 0, pageWidth, 50, 'F');
+
+    // Draw EduFund Badge (Shield/Circle design)
+    const badgeX = 15;
+    const badgeY = 15;
+    const badgeSize = 20;
+
+    // Badge circle background
+    doc.setFillColor(255, 255, 255);
+    doc.circle(badgeX + badgeSize/2, badgeY + badgeSize/2, badgeSize/2, 'F');
+
+    // Badge icon (Graduation cap symbol using shapes)
+    doc.setFillColor(16, 185, 129);
+    doc.circle(badgeX + badgeSize/2, badgeY + badgeSize/2 - 2, 6, 'F'); // Head
+    doc.rect(badgeX + 3, badgeY + badgeSize/2, badgeSize - 6, 3, 'F'); // Base
+    doc.triangle(badgeX + badgeSize/2, badgeY + 2, badgeX + badgeSize/2 - 6, badgeY + badgeSize/2 + 1, badgeX + badgeSize/2 + 6, badgeY + badgeSize/2 + 1, 'F'); // Cap
+
+    // Company name and tagline
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EduFund', badgeX + badgeSize + 8, 25);
+
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Supporting Student Dreams Across Morocco', badgeX + badgeSize + 8, 33);
+
+    doc.setFontSize(9);
+    doc.text('www.edufund.ma | contact@edufund.ma', badgeX + badgeSize + 8, 40);
+
+    // Official Receipt Banner
+    doc.setFillColor(236, 253, 245); // Light green
+    doc.rect(0, 50, pageWidth, 20, 'F');
+
+    doc.setTextColor(5, 150, 105); // Dark green
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('OFFICIAL DONATION RECEIPT', pageWidth / 2, 63, { align: 'center' });
+
+    // Receipt metadata box
+    doc.setDrawColor(200, 200, 200);
+    doc.setFillColor(249, 250, 251);
+    doc.roundedRect(pageWidth - 70, 75, 60, 35, 3, 3, 'FD');
+
+    doc.setTextColor(75, 85, 99);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECEIPT INFO', pageWidth - 40, 82, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`#${donation.receipt_number || 'N/A'}`, pageWidth - 40, 89, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.text(`ID: ${donation.id}`, pageWidth - 40, 95, { align: 'center' });
+
+    const donationDate = new Date(donation.created_at);
+    doc.text(donationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }), pageWidth - 40, 101, { align: 'center' });
+    doc.text(donationDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), pageWidth - 40, 106, { align: 'center' });
+
+    // Donor Information Section
+    let currentY = 120;
+
+    // Donor info box
+    doc.setDrawColor(16, 185, 129);
+    doc.setLineWidth(0.5);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(15, currentY, 85, 40, 3, 3, 'FD');
+
+    doc.setTextColor(16, 185, 129);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DONOR INFORMATION', 20, currentY + 8);
+
+    doc.setTextColor(31, 41, 55);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Name:', 20, currentY + 16);
+    doc.setFont('helvetica', 'normal');
+    doc.text(donation.donor_name || 'Anonymous', 35, currentY + 16);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Email:', 20, currentY + 23);
+    doc.setFont('helvetica', 'normal');
+    doc.text(donation.donor_email || 'N/A', 35, currentY + 23);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Status:', 20, currentY + 30);
+    doc.setTextColor(5, 150, 105);
+    doc.setFont('helvetica', 'bold');
+    doc.text('✓ VERIFIED', 35, currentY + 30);
+
+    // Campaign Details Section
+    doc.setDrawColor(16, 185, 129);
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(105, currentY, pageWidth - 120, 40, 3, 3, 'FD');
+
+    doc.setTextColor(16, 185, 129);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CAMPAIGN DETAILS', 110, currentY + 8);
+
+    doc.setTextColor(31, 41, 55);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Campaign:', 110, currentY + 16);
+    doc.setFont('helvetica', 'normal');
+    const campaignTitle = doc.splitTextToSize(donation.campaign_title, 60);
+    doc.text(campaignTitle[0], 130, currentY + 16);
+
+    if (donation.student_name) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Student:', 110, currentY + 23);
+      doc.setFont('helvetica', 'normal');
+      doc.text(donation.student_name, 130, currentY + 23);
+    }
+
+    if (donation.category) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Field:', 110, currentY + 30);
+      doc.setFont('helvetica', 'normal');
+      doc.text(donation.category, 130, currentY + 30);
+    }
+
+    if (donation.university) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('University:', 110, currentY + 37);
+      doc.setFont('helvetica', 'normal');
+      doc.text(donation.university.substring(0, 35), 130, currentY + 37);
+    }
+
+    // Donation Amount Section with Highlight
+    currentY = 170;
+
+    // Amount highlight banner
+    doc.setFillColor(240, 253, 244);
+    doc.setDrawColor(16, 185, 129);
+    doc.setLineWidth(1);
+    doc.roundedRect(15, currentY, pageWidth - 30, 25, 3, 3, 'FD');
+
+    doc.setTextColor(5, 150, 105);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DONATION AMOUNT', 20, currentY + 8);
+
+    doc.setTextColor(16, 185, 129);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${donation.amount.toLocaleString()} MAD`, pageWidth - 20, currentY + 15, { align: 'right' });
+
+    doc.setTextColor(75, 85, 99);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`≈ $${amountUSD.toFixed(2)} USD  |  ≈ €${amountEUR.toFixed(2)} EUR`, pageWidth - 20, currentY + 22, { align: 'right' });
+
+    // Detailed Currency Conversion Table
+    doc.autoTable({
+      startY: currentY + 30,
+      head: [['Currency', 'Amount', 'Exchange Rate', 'Date']],
+      body: [
+        ['MAD (Moroccan Dirham)', `${donation.amount.toLocaleString()} MAD`, '1.00000', donationDate.toLocaleDateString()],
+        ['USD (US Dollar)', `$${amountUSD.toFixed(2)}`, rateUSD, donationDate.toLocaleDateString()],
+        ['EUR (Euro)', `€${amountEUR.toFixed(2)}`, rateEUR, donationDate.toLocaleDateString()],
+      ],
+      theme: 'striped',
+      headStyles: {
+        fillColor: [16, 185, 129],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 4
+      },
+      columnStyles: {
+        0: { fontStyle: 'bold', cellWidth: 60 },
+        1: { halign: 'right', fontStyle: 'bold', cellWidth: 40 },
+        2: { halign: 'center', cellWidth: 35 },
+        3: { halign: 'center', cellWidth: 35 },
+      },
+      foot: [[
+        {
+          content: conversionResult.source === 'openexchangerates'
+            ? '✓ Live exchange rates provided by OpenExchangeRates API'
+            : '⚠ Using fallback exchange rates',
+          colSpan: 4,
+          styles: {
+            halign: 'center',
+            fontSize: 7,
+            textColor: [107, 114, 128],
+            fontStyle: 'italic'
+          }
+        }
+      ]],
+      margin: { left: 15, right: 15 }
+    });
+
+    // Donor Message Section (if provided)
+    if (donation.donor_message) {
+      const finalY = doc.lastAutoTable.finalY + 12;
+
+      doc.setDrawColor(209, 213, 219);
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(15, finalY, pageWidth - 30, 30, 3, 3, 'FD');
+
+      doc.setTextColor(16, 185, 129);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('💬 YOUR MESSAGE TO THE STUDENT', 20, finalY + 8);
+
+      doc.setTextColor(55, 65, 81);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'italic');
+      const splitMessage = doc.splitTextToSize(`"${donation.donor_message}"`, pageWidth - 50);
+      doc.text(splitMessage, 20, finalY + 16);
+    }
+
+    // Tax-Deductible Notice (if applicable)
+    const noticeY = donation.donor_message ? doc.lastAutoTable.finalY + 50 : doc.lastAutoTable.finalY + 12;
+
+    doc.setFillColor(254, 243, 199);
+    doc.setDrawColor(251, 191, 36);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(15, noticeY, pageWidth - 30, 15, 2, 2, 'FD');
+
+    doc.setTextColor(146, 64, 14);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ℹ IMPORTANT:', 20, noticeY + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.text('This donation receipt may be tax-deductible. Please consult with your tax advisor.', 45, noticeY + 6);
+    doc.text('Keep this document for your records. For questions, contact: donations@edufund.ma', 20, noticeY + 11);
+
+    // Professional Footer
+    const footerY = doc.internal.pageSize.height - 40;
+
+    // Thank you section
+    doc.setFillColor(240, 253, 244);
+    doc.rect(0, footerY - 5, pageWidth, 20, 'F');
+
+    doc.setTextColor(5, 150, 105);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Thank You for Supporting Education in Morocco!', pageWidth / 2, footerY + 3, { align: 'center' });
+
+    doc.setTextColor(75, 85, 99);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Your generosity helps students achieve their dreams and build a brighter future.', pageWidth / 2, footerY + 9, { align: 'center' });
+
+    // Bottom footer bar
+    doc.setFillColor(31, 41, 55);
+    doc.rect(0, footerY + 15, pageWidth, 25, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EduFund - Official Donation Receipt', pageWidth / 2, footerY + 22, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.text('www.edufund.ma | contact@edufund.ma | +212 5XX-XXXXXX', pageWidth / 2, footerY + 27, { align: 'center' });
+
+    doc.setFontSize(6);
+    doc.setTextColor(156, 163, 175);
+    doc.text(`Document generated on ${new Date().toLocaleString('en-US')} | Receipt ID: ${donation.receipt_number || donation.id}`, pageWidth / 2, footerY + 32, { align: 'center' });
+
+    // Send PDF
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=receipt-${donation.receipt_number || donationId}.pdf`);
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error('PDF generation error:', err);
+    res.status(500).json({ error: 'PDF generation error' });
+  }
+});
+
+// PDF Analytics Report
+app.post('/api/export/analytics-pdf', async (req, res) => {
+  try {
+    const { jsPDF } = require('jspdf');
+    require('jspdf-autotable'); // This extends jsPDF with autoTable method
+    const { timeRange = 'all' } = req.body;
+
+    // Fetch analytics data (reuse from global analytics endpoint)
+    let dateFilter = '';
+    if (timeRange === 'week') {
+      dateFilter = 'AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+    } else if (timeRange === 'month') {
+      dateFilter = 'AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+    }
+
+    const totalRows = await query(`SELECT COALESCE(SUM(current_amount), 0) as total FROM campaigns WHERE 1=1 ${dateFilter}`);
+    const countRows = await query(`SELECT COUNT(*) as count FROM campaigns WHERE status = 'published' ${dateFilter}`);
+    const studentsRows = await query(`SELECT COUNT(DISTINCT id) as count FROM campaigns WHERE status IN ('published', 'completed') ${dateFilter}`);
+    const avgRows = await query(`SELECT AVG(CASE WHEN goal_amount > 0 THEN (current_amount / goal_amount * 100) ELSE 0 END) as avg FROM campaigns WHERE 1=1 ${dateFilter}`);
+    const donorsRows = await query(`SELECT COUNT(DISTINCT donor_email) as count FROM donations WHERE donor_email IS NOT NULL ${dateFilter}`);
+
+    const byField = await query(`
+      SELECT category, COUNT(*) as count, COALESCE(SUM(current_amount), 0) as total
+      FROM campaigns WHERE category IS NOT NULL ${dateFilter}
+      GROUP BY category ORDER BY total DESC LIMIT 5
+    `);
+
+    const byRegion = await query(`
+      SELECT city, COUNT(*) as count, COALESCE(SUM(current_amount), 0) as total
+      FROM campaigns WHERE city IS NOT NULL ${dateFilter}
+      GROUP BY city ORDER BY total DESC LIMIT 5
+    `);
+
+    // Create PDF
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Header
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EduFund Analytics Report', 20, 22);
+
+    // Date range
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    const rangeText = timeRange === 'all' ? 'All Time' : timeRange === 'month' ? 'This Month' : 'This Week';
+    doc.text(`Report Period: ${rangeText}`, 20, 45);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 20, 45, { align: 'right' });
+
+    // Key metrics table
+    doc.autoTable({
+      startY: 55,
+      head: [['Metric', 'Value']],
+      body: [
+        ['Total Collected', `${totalRows[0].total.toLocaleString()} MAD`],
+        ['Active Campaigns', countRows[0].count],
+        ['Students Supported', studentsRows[0].count],
+        ['Avg Completion Rate', `${Math.round(avgRows[0].avg || 0)}%`],
+        ['Total Donors', donorsRows[0].count],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10 },
+    });
+
+    // Funding by field
+    if (byField.length > 0) {
+      const startY = doc.lastAutoTable.finalY + 15;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Funding by Field of Study', 20, startY);
+
+      doc.autoTable({
+        startY: startY + 5,
+        head: [['Field', 'Campaigns', 'Total Collected (MAD)', 'Average']],
+        body: byField.map(item => [
+          item.category,
+          item.count,
+          item.total.toLocaleString(),
+          (item.total / item.count).toFixed(0),
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 9 },
+      });
+    }
+
+    // Funding by region
+    if (byRegion.length > 0) {
+      const startY = doc.lastAutoTable.finalY + 15;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Funding by Region', 20, startY);
+
+      doc.autoTable({
+        startY: startY + 5,
+        head: [['City', 'Campaigns', 'Total Collected (MAD)', 'Percentage']],
+        body: byRegion.map(item => {
+          const total = byRegion.reduce((sum, i) => sum + i.total, 0);
+          const percentage = ((item.total / total) * 100).toFixed(1);
+          return [
+            item.city,
+            item.count,
+            item.total.toLocaleString(),
+            `${percentage}%`,
+          ];
+        }),
+        theme: 'grid',
+        headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 9 },
+      });
+    }
+
+    // Footer
+    const footerY = doc.internal.pageSize.height - 20;
+    doc.setFontSize(9);
+    doc.setTextColor(128, 128, 128);
+    doc.text('EduFund - Supporting Student Dreams', pageWidth / 2, footerY, { align: 'center' });
+    doc.text('This report is generated automatically and reflects real-time data.', pageWidth / 2, footerY + 5, { align: 'center' });
+
+    // Send PDF
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=analytics-report-${new Date().toISOString().split('T')[0]}.pdf`);
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error('PDF analytics report error:', err);
+    res.status(500).json({ error: 'PDF generation error' });
+  }
+});
+
+// Currency Conversion (using OpenExchangeRates API)
+const currencyService = require('./currency-service');
+
+app.get('/api/currency/convert', async (req, res) => {
+  try {
+    const { amount, from = 'MAD', to = 'USD' } = req.query;
+
+    if (!amount) {
+      return res.status(400).json({ error: 'Amount is required' });
+    }
+
+    const result = await currencyService.convertCurrency(Number(amount), from, to);
+    res.json(result);
+  } catch (err) {
+    console.error('Currency conversion error:', err);
+    res.status(500).json({ error: 'Conversion error', message: err.message });
+  }
+});
+
+// Get all available exchange rates
+app.get('/api/currency/rates', async (req, res) => {
+  try {
+    const result = await currencyService.getAllRates();
+    res.json(result);
+  } catch (err) {
+    console.error('Get rates error:', err);
+    res.status(500).json({ error: 'Failed to fetch rates', message: err.message });
+  }
+});
+
+// Convert MAD to multiple currencies
+app.get('/api/currency/convert-mad', async (req, res) => {
+  try {
+    const { amount } = req.query;
+
+    if (!amount) {
+      return res.status(400).json({ error: 'Amount is required' });
+    }
+
+    const result = await currencyService.convertMADToMultiple(Number(amount));
+    res.json(result);
+  } catch (err) {
+    console.error('MAD conversion error:', err);
+    res.status(500).json({ error: 'Conversion error', message: err.message });
+  }
+});
+
+// ==== ADMIN ENDPOINTS ====
+
+// Admin Statistics
+
+// ===== COMPREHENSIVE ADMIN SYSTEM =====
+// Helper functions for logging
+
+async function logAdminAction(adminId, adminEmail, actionType, entityType, entityId, oldValue, newValue, details) {
+  try {
+    await query(
+      `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [adminId, adminEmail, actionType, entityType, entityId, JSON.stringify(oldValue), JSON.stringify(newValue), details]
+    );
+  } catch (err) {
+    console.error('Error logging admin action:', err);
+  }
+}
+
+async function logSystemActivity(userId, userEmail, activityType, action, details, success = true, errorMessage = null) {
+  try {
+    await query(
+      `INSERT INTO system_activity_log (user_id, user_email, activity_type, action, details, success, error_message)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [userId, userEmail, activityType, action, JSON.stringify(details), success, errorMessage]
+    );
+  } catch (err) {
+    console.error('Error logging system activity:', err);
+  }
+}
+
+// ===== USER/PROFILE MANAGEMENT =====
+
+// Get all users with filters
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const { status, role, verified, search, page = 1, limit = 20 } = req.query;
+    const where = [];
+    const params = [];
+
+    if (status) {
+      where.push('status = ?');
+      params.push(status);
+    }
+    if (role) {
+      where.push('role = ?');
+      params.push(role);
+    }
+    if (verified !== undefined) {
+      where.push('verified = ?');
+      params.push(verified === 'true' ? 1 : 0);
+    }
+    if (search) {
+      where.push('(email LIKE ? OR id = ?)');
+      params.push(`%${search}%`, parseInt(search) || 0);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const [total] = await query(`SELECT COUNT(*) as count FROM users ${whereSql}`, params);
+
+    const users = await query(
+      `SELECT id, email, role, status, verified, created_at, profile_approved_at, rejection_reason
+       FROM users ${whereSql}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+
+    res.json({
+      success: true,
+      users,
+      total: total.count,
+      page: parseInt(page),
+      totalPages: Math.ceil(total.count / parseInt(limit))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user details with full history
+app.get('/api/admin/users/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const campaigns = await query('SELECT * FROM campaigns WHERE user_id = ?', [userId]);
+    const donations = await query('SELECT * FROM donations WHERE user_id = ?', [userId]);
+
+    const statusHistory = await query(
+      `SELECT h.*, u.email as changed_by_email
+       FROM user_status_history h
+       LEFT JOIN users u ON h.changed_by = u.id
+       WHERE h.user_id = ?
+       ORDER BY h.created_at DESC`,
+      [userId]
+    );
+
+    const auditLog = await query(
+      `SELECT * FROM audit_log
+       WHERE entity_type = 'user' AND entity_id = ?
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      user,
+      campaigns,
+      donations,
+      statusHistory,
+      auditLog
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Approve user profile (WORKING VERSION)
+app.post('/api/admin/users/:id/approve', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, notes } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query(
+      `UPDATE users
+       SET verified = 1,
+           status = 'active',
+           profile_approved_at = NOW(),
+           approved_by = ?
+       WHERE id = ?`,
+      [adminId, userId]
+    );
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'active', ?, ?)`,
+      [userId, oldStatus, adminId, notes || 'Profile approved by admin']
+    );
+
+    await logAdminAction(
+      adminId,
+      adminEmail,
+      'APPROVE_PROFILE',
+      'user',
+      userId,
+      { status: oldStatus, verified: user.verified },
+      { status: 'active', verified: 1 },
+      `Profile approved. Notes: ${notes || 'None'}`
+    );
+
+    await logSystemActivity(
+      userId,
+      user.email,
+      'PROFILE_VERIFICATION',
+      'APPROVED',
+      { approvedBy: adminEmail, notes }
+    );
+
+    await query(
+      'DELETE FROM admin_notifications WHERE notification_type = ? AND entity_id = ?',
+      ['profile_review', userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile approved successfully',
+      user: {
+        id: userId,
+        email: user.email,
+        status: 'active',
+        verified: true
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reject user profile (WORKING VERSION)
+app.post('/api/admin/users/:id/reject', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, reason } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query(
+      `UPDATE users
+       SET verified = 0,
+           status = 'rejected',
+           rejection_reason = ?
+       WHERE id = ?`,
+      [reason, userId]
+    );
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'rejected', ?, ?)`,
+      [userId, oldStatus, adminId, reason]
+    );
+
+    await logAdminAction(
+      adminId,
+      adminEmail,
+      'REJECT_PROFILE',
+      'user',
+      userId,
+      { status: oldStatus },
+      { status: 'rejected' },
+      `Profile rejected. Reason: ${reason}`
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile rejected',
+      user: {
+        id: userId,
+        email: user.email,
+        status: 'rejected',
+        reason
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Suspend user
+app.post('/api/admin/users/:id/suspend', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, reason } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query('UPDATE users SET status = ?, rejection_reason = ? WHERE id = ?', ['suspended', reason, userId]);
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'suspended', ?, ?)`,
+      [userId, oldStatus, adminId, reason]
+    );
+
+    await logAdminAction(adminId, adminEmail, 'SUSPEND_USER', 'user', userId, { status: oldStatus }, { status: 'suspended' }, reason);
+
+    res.json({ success: true, message: 'User suspended' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reactivate user
+app.post('/api/admin/users/:id/reactivate', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, notes } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query('UPDATE users SET status = ?, verified = 1, rejection_reason = NULL WHERE id = ?', ['active', userId]);
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'active', ?, ?)`,
+      [userId, oldStatus, adminId, notes || 'Reactivated by admin']
+    );
+
+    await logAdminAction(adminId, adminEmail, 'REACTIVATE_USER', 'user', userId, { status: oldStatus }, { status: 'active' }, notes);
+
+    res.json({ success: true, message: 'User reactivated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ===== CAMPAIGN MANAGEMENT =====
+
+// Get all campaigns for admin
+app.get('/api/admin/campaigns', async (req, res) => {
+  try {
+    const { status, flagged, search, page = 1, limit = 20 } = req.query;
+    const where = [];
+    const params = [];
+
+    if (status) {
+      where.push('c.status = ?');
+      params.push(status);
+    }
+    if (flagged === 'true') {
+      where.push('c.flagged = 1');
+    }
+    if (search) {
+      where.push('(c.title LIKE ? OR c.id = ? OR u.email LIKE ?)');
+      params.push(`%${search}%`, parseInt(search) || 0, `%${search}%`);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const [total] = await query(
+      `SELECT COUNT(*) as count FROM campaigns c LEFT JOIN users u ON c.user_id = u.id ${whereSql}`,
+      params
+    );
+
+    const campaigns = await query(
+      `SELECT c.*, u.email as creator_email, u.status as user_status
+       FROM campaigns c
+       LEFT JOIN users u ON c.user_id = u.id
+       ${whereSql}
+       ORDER BY c.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+
+    res.json({
+      success: true,
+      campaigns,
+      total: total.count,
+      page: parseInt(page),
+      totalPages: Math.ceil(total.count / parseInt(limit))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get campaign details with full history
+app.get('/api/admin/campaigns/:id/details', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+
+    const [campaign] = await query('SELECT c.*, u.email as creator_email FROM campaigns c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?', [campaignId]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const donations = await query('SELECT * FROM donations WHERE campaign_id = ? ORDER BY created_at DESC', [campaignId]);
+    const updates = await query('SELECT * FROM campaign_updates WHERE campaign_id = ? ORDER BY created_at DESC', [campaignId]);
+    const comments = await query('SELECT * FROM campaign_comments WHERE campaign_id = ? ORDER BY created_at DESC', [campaignId]);
+
+    const statusHistory = await query(
+      `SELECT h.*, u.email as changed_by_email
+       FROM campaign_status_history h
+       LEFT JOIN users u ON h.changed_by = u.id
+       WHERE h.campaign_id = ?
+       ORDER BY h.created_at DESC`,
+      [campaignId]
+    );
+
+    const auditLog = await query(
+      `SELECT * FROM audit_log WHERE entity_type = 'campaign' AND entity_id = ? ORDER BY created_at DESC LIMIT 50`,
+      [campaignId]
+    );
+
+    res.json({
+      success: true,
+      campaign,
+      donations,
+      updates,
+      comments,
+      statusHistory,
+      auditLog
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: Approve campaign
+app.post('/api/admin/campaigns/:id/approve', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    const { adminId, adminEmail, notes } = req.body;
+
+    // Get current campaign
+    const [campaign] = await query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const oldStatus = campaign.status;
+
+    // Update campaign status to published (approved)
+    await query(
+      `UPDATE campaigns
+       SET status = 'published',
+           approved_at = NOW(),
+           approved_by = ?,
+           moderation_notes = ?
+       WHERE id = ?`,
+      [adminId, notes || 'Campaign approved', campaignId]
+    );
+
+    // Log status history
+    try {
+      await query(
+        `INSERT INTO campaign_status_history (campaign_id, old_status, new_status, changed_by, reason)
+         VALUES (?, ?, 'published', ?, ?)`,
+        [campaignId, oldStatus, adminId, notes || 'Campaign approved by admin']
+      );
+    } catch (err) {
+      console.log('campaign_status_history table not found, skipping');
+    }
+
+    // Log admin action in audit log
+    try {
+      await query(
+        `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+         VALUES (?, ?, 'APPROVE_CAMPAIGN', 'campaign', ?, ?, ?, ?)`,
+        [adminId, adminEmail, campaignId, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'published' }), notes || 'Campaign approved']
+      );
+    } catch (err) {
+      console.log('audit_log table not found, skipping');
+    }
+
+    res.json({ success: true, message: 'Campaign approved successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: Reject campaign
+app.post('/api/admin/campaigns/:id/reject', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    const { adminId, adminEmail, reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({ error: 'Rejection reason is required' });
+    }
+
+    // Get current campaign
+    const [campaign] = await query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const oldStatus = campaign.status;
+
+    // Update campaign status to rejected
+    await query(
+      `UPDATE campaigns
+       SET status = 'rejected',
+           rejection_reason = ?,
+           moderation_notes = ?
+       WHERE id = ?`,
+      [reason, reason, campaignId]
+    );
+
+    // Log status history
+    try {
+      await query(
+        `INSERT INTO campaign_status_history (campaign_id, old_status, new_status, changed_by, reason)
+         VALUES (?, ?, 'rejected', ?, ?)`,
+        [campaignId, oldStatus, adminId, reason]
+      );
+    } catch (err) {
+      console.log('campaign_status_history table not found, skipping');
+    }
+
+    // Log admin action in audit log
+    try {
+      await query(
+        `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+         VALUES (?, ?, 'REJECT_CAMPAIGN', 'campaign', ?, ?, ?, ?)`,
+        [adminId, adminEmail, campaignId, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'rejected' }), reason]
+      );
+    } catch (err) {
+      console.log('audit_log table not found, skipping');
+    }
+
+    res.json({ success: true, message: 'Campaign rejected' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get admin dashboard stats
+app.get('/api/admin/dashboard-stats', async (req, res) => {
+  try {
+    const [totalUsers] = await query('SELECT COUNT(*) as count FROM users');
+    const [activeUsers] = await query('SELECT COUNT(*) as count FROM users WHERE status = "active"');
+    const [pendingUsers] = await query('SELECT COUNT(*) as count FROM users WHERE status = "pending"');
+    const [suspendedUsers] = await query('SELECT COUNT(*) as count FROM users WHERE status = "suspended"');
+
+    const [totalCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns');
+    const [activeCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE status = "active"');
+    const [pendingCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE status IN ("draft", "pending")');
+    const [flaggedCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE flagged = 1');
+
+    const [totalDonations] = await query('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM donations');
+    const [todayDonations] = await query('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM donations WHERE DATE(created_at) = CURDATE()');
+
+    const [unreadNotifications] = await query('SELECT COUNT(*) as count FROM admin_notifications WHERE read_status = 0');
+    const [recentAuditLogs] = await query('SELECT COUNT(*) as count FROM audit_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)');
+
+    res.json({
+      success: true,
+      stats: {
+        users: {
+          total: totalUsers.count,
+          active: activeUsers.count,
+          pending: pendingUsers.count,
+          suspended: suspendedUsers.count
+        },
+        campaigns: {
+          total: totalCampaigns.count,
+          active: activeCampaigns.count,
+          pending: pendingCampaigns.count,
+          flagged: flaggedCampaigns.count
+        },
+        donations: {
+          total: totalDonations.count,
+          totalAmount: totalDonations.total,
+          today: todayDonations.count,
+          todayAmount: todayDonations.total
+        },
+        notifications: {
+          unread: unreadNotifications.count
+        },
+        activity: {
+          last24Hours: recentAuditLogs.count
+        }
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get audit log
+app.get('/api/admin/audit-log', async (req, res) => {
+  try {
+    const { actionType, entityType, adminId, page = 1, limit = 100 } = req.query;
+    const where = [];
+    const params = [];
+
+    if (actionType) {
+      where.push('action_type = ?');
+      params.push(actionType);
+    }
+    if (entityType) {
+      where.push('entity_type = ?');
+      params.push(entityType);
+    }
+    if (adminId) {
+      where.push('admin_id = ?');
+      params.push(adminId);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const logs = await query(
+      `SELECT * FROM audit_log ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+
+    res.json({ success: true, logs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get admin notifications
+app.get('/api/admin/notifications', async (req, res) => {
+  try {
+    const { read } = req.query;
+    const where = [];
+    const params = [];
+
+    if (read !== undefined) {
+      where.push('read_status = ?');
+      params.push(read === 'true' ? 1 : 0);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const notifications = await query(
+      `SELECT * FROM admin_notifications ${whereSql} ORDER BY created_at DESC LIMIT 100`,
+      params
+    );
+
+    res.json({ success: true, notifications });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Mark notification as read
+app.post('/api/admin/notifications/:id/read', async (req, res) => {
+  try {
+    const notificationId = parseInt(req.params.id);
+    await query('UPDATE admin_notifications SET read_status = 1 WHERE id = ?', [notificationId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Old admin endpoints kept for backwards compatibility
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const [totalUsers] = await query('SELECT COUNT(*) as count FROM users');
+    const [totalCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns');
+    const [activeCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE status = "published"');
+    const [pendingCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE status = "draft"');
+    const [pendingProfiles] = await query('SELECT COUNT(*) as count FROM users WHERE role = "student"');
+    const [totalRevenue] = await query('SELECT COALESCE(SUM(current_amount), 0) as total FROM campaigns');
+
+    // Monthly stats
+    const [newCampaignsMonth] = await query('SELECT COUNT(*) as count FROM campaigns WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+    const [newUsersMonth] = await query('SELECT COUNT(*) as count FROM users WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+    const [donationsMonth] = await query('SELECT COUNT(*) as count FROM donations WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+    const [revenueMonth] = await query('SELECT COALESCE(SUM(amount), 0) as total FROM donations WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+
+    res.json({
+      success: true,
+      stats: {
+        totalUsers: totalUsers.count,
+        totalCampaigns: totalCampaigns.count,
+        activeCampaigns: activeCampaigns.count,
+        pendingValidations: pendingCampaigns.count + pendingProfiles.count,
+        totalRevenue: totalRevenue.total,
+        newCampaignsThisMonth: newCampaignsMonth.count,
+        newUsersThisMonth: newUsersMonth.count,
+        totalDonationsThisMonth: donationsMonth.count,
+        revenueThisMonth: revenueMonth.total,
+      },
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err);
+    res.status(500).json({ error: 'Server error', details: err.message });
+  }
+});
+
+// Get pending campaigns
+app.get('/api/admin/campaigns/pending', async (req, res) => {
+  try {
+    const campaigns = await query(`
+      SELECT c.*, u.email as creator_email
+      FROM campaigns c
+      LEFT JOIN users u ON c.user_id = u.id
+      WHERE c.status = 'draft'
+      ORDER BY c.created_at DESC
+    `);
+
+    res.json({ success: true, campaigns });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get all campaigns for management
+app.get('/api/admin/campaigns/all', async (req, res) => {
+  try {
+    const campaigns = await query(`
+      SELECT c.*, u.email as creator_email
+      FROM campaigns c
+      LEFT JOIN users u ON c.user_id = u.id
+      ORDER BY c.created_at DESC
+    `);
+
+    res.json({ success: true, campaigns });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Suspend campaign (used for suspending published campaigns)
+app.post('/api/admin/campaigns/:id/suspend', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    await query('UPDATE campaigns SET status = ? WHERE id = ?', ['suspended', id]);
+    res.json({ success: true, message: 'Campaign suspended and hidden from public' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Change campaign status
+app.put('/api/admin/campaigns/:id/status', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { status } = req.body;
+
+    if (!['draft', 'published', 'completed', 'suspended', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    await query('UPDATE campaigns SET status = ? WHERE id = ?', [status, id]);
+    res.json({ success: true, message: 'Status updated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get pending profiles
+app.get('/api/admin/profiles/pending', async (req, res) => {
+  try {
+    const profiles = await query(`
+      SELECT u.*,
+             MAX(c.university) as university,
+             MAX(c.category) as field_of_study
+      FROM users u
+      LEFT JOIN campaigns c ON c.user_id = u.id
+      WHERE u.role = 'student' AND u.status = 'pending'
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+    `);
+
+    res.json({ success: true, profiles });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Approve profile (activate user) - FIXED VERSION
+app.post('/api/admin/profiles/:id/approve', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { adminId = 1, adminEmail = 'admin@edufund.com', notes = 'Profile approved' } = req.body || {};
+
+    // Get current user
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    // Update user status
+    await query(
+      `UPDATE users
+       SET verified = 1,
+           status = 'active',
+           profile_approved_at = NOW(),
+           approved_by = ?
+       WHERE id = ?`,
+      [adminId, id]
+    );
+
+    // Log status history
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'active', ?, ?)`,
+      [id, oldStatus, adminId, notes]
+    );
+
+    // Log admin action
+    await query(
+      `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+       VALUES (?, ?, 'APPROVE_PROFILE', 'user', ?, ?, ?, ?)`,
+      [adminId, adminEmail, id, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'active' }), notes]
+    );
+
+    res.json({ success: true, message: 'Profile validated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reject profile (could mark as inactive or delete) - FIXED VERSION
+app.post('/api/admin/profiles/:id/reject', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { adminId = 1, adminEmail = 'admin@edufund.com', reason = 'Profile rejected' } = req.body || {};
+
+    // Get current user
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    // Update user status
+    await query(
+      `UPDATE users
+       SET verified = 0,
+           status = 'rejected',
+           rejection_reason = ?
+       WHERE id = ?`,
+      [reason, id]
+    );
+
+    // Log status history
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'rejected', ?, ?)`,
+      [id, oldStatus, adminId, reason]
+    );
+
+    // Log admin action
+    await query(
+      `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+       VALUES (?, ?, 'REJECT_PROFILE', 'user', ?, ?, ?, ?)`,
+      [adminId, adminEmail, id, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'rejected' }), reason]
+    );
+
+    res.json({ success: true, message: 'Profile rejected' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Generate monthly admin report
+app.post('/api/admin/reports/monthly', async (req, res) => {
+  try {
+    const { jsPDF } = require('jspdf');
+    const autoTable = require('jspdf-autotable').default;
+
+    // Fetch monthly data
+    const [totalRevenue] = await query('SELECT COALESCE(SUM(amount), 0) as total FROM donations WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+    const [campaignsCompleted] = await query('SELECT COUNT(*) as count FROM campaigns WHERE status = "completed" AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+    const [totalDonations] = await query('SELECT COUNT(*) as count FROM donations WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+    const [newCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
+
+    const topCampaigns = await query(`
+      SELECT c.title, c.student_name, c.current_amount, c.goal_amount,
+             (c.current_amount / c.goal_amount * 100) as completion_rate
+      FROM campaigns c
+      WHERE c.created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)
+      ORDER BY c.current_amount DESC
+      LIMIT 10
+    `);
+
+    const successRate = campaignsCompleted[0].count > 0 ?
+      ((campaignsCompleted[0].count / newCampaigns[0].count) * 100).toFixed(1) : 0;
+
+    // Create PDF
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // Header
+    doc.setFillColor(16, 185, 129);
+    doc.rect(0, 0, pageWidth, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Rapport Mensuel Administrateur', 20, 22);
+
+    // Period
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    const month = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    doc.text(`Période: ${month}`, 20, 45);
+    doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - 20, 45, { align: 'right' });
+
+    // Summary table
+    doc.autoTable({
+      startY: 55,
+      head: [['Indicateur', 'Valeur']],
+      body: [
+        ['Total collecté', `${totalRevenue[0].total.toLocaleString()} MAD`],
+        ['Nouvelles campagnes', newCampaigns[0].count],
+        ['Campagnes terminées', campaignsCompleted[0].count],
+        ['Total donations', totalDonations[0].count],
+        ['Taux de réussite', `${successRate}%`],
+      ],
+      theme: 'striped',
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 10 },
+    });
+
+    // Top campaigns
+    if (topCampaigns.length > 0) {
+      const startY = doc.lastAutoTable.finalY + 15;
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Top 10 Campagnes du Mois', 20, startY);
+
+      doc.autoTable({
+        startY: startY + 5,
+        head: [['Campagne', 'Étudiant', 'Collecté (MAD)', 'Objectif (MAD)', 'Taux']],
+        body: topCampaigns.map(c => [
+          c.title.substring(0, 30),
+          c.student_name,
+          c.current_amount.toLocaleString(),
+          c.goal_amount.toLocaleString(),
+          `${c.completion_rate.toFixed(0)}%`,
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+        styles: { fontSize: 9 },
+      });
+    }
+
+    // Footer
+    const footerY = doc.internal.pageSize.height - 20;
+    doc.setFontSize(9);
+    doc.setTextColor(128, 128, 128);
+    doc.text('EduFund - Rapport Administrateur Confidentiel', pageWidth / 2, footerY, { align: 'center' });
+
+    // Send PDF
+    const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=rapport-admin-${new Date().toISOString().split('T')[0]}.pdf`);
+    res.send(pdfBuffer);
+
+  } catch (err) {
+    console.error('Admin report error:', err);
+    res.status(500).json({ error: 'Report generation error' });
+  }
+});
+
+// Load and start email automation service
+try {
+  require('./email-automation');
+  console.log('Email automation service loaded successfully');
+} catch (err) {
+  console.warn('Email automation service not loaded:', err.message);
+  console.warn('To enable email automation, configure EMAIL_SERVICE, EMAIL_USER, and EMAIL_PASSWORD in .env');
+}
+
+// ========== PROFILE ROUTES ==========
+app.use('/api', profileRoutes);
+
+// Catch-all route to serve the React app (exclude API and embed routes)
+app.get(/^(?!\/api|\/embed).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
+});
+
+// Start server
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

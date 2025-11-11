@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2025-10-24T13:30:27.872Z",
+  "totalReferences": 5,
+  "totalRemote": 0,
+  "references": [
+    {
+      "sourceFile": "public\\manifest.json",
+      "context": "manifest-icon",
+      "original": "favicon.ico",
+      "isRemote": false
+    },
+    {
+      "sourceFile": "index.html",
+      "context": "html-link",
+      "original": "/favicon.ico",
+      "isRemote": false
+    },
+    {
+      "sourceFile": "build\\index.html",
+      "context": "html-link",
+      "original": "/favicon.ico",
+      "isRemote": false
+    },
+    {
+      "sourceFile": "build\\manifest.json",
+      "context": "manifest-icon",
+      "original": "favicon.ico",
+      "isRemote": false
+    },
+    {
+      "sourceFile": "build\\index.html",
+      "context": "html-link",
+      "original": "/favicon.ico",
+      "isRemote": false
+    }
+  ],
+  "remoteMapping": [],
+  "localImages": [
+    "public\\assets\\images\\Untitled.png",
+    "build\\assets\\images\\Untitled.png"
+  ]
+}

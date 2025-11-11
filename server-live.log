@@ -1,0 +1,9 @@
+Email automation service started!
+Monthly reports will be sent on the 1st of each month at 9:00 AM
+Email automation service loaded successfully
+Server running on port 3001
+Connected to MySQL database
+Database tables initialized successfully
+PDF analytics report error: TypeError: doc.autoTable is not a function
+    at /mnt/c/Users/arhou/OneDrive/Bureau/edu fund/server.js:1300:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)

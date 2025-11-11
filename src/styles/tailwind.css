@@ -1,0 +1,170 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core System Colors - GoFundMe Style */
+    --color-background: #FFFFFF; /* white */
+    --color-foreground: #2D2D2D; /* dark gray */
+    --color-border: #DCDCDC; /* light gray */
+    --color-input: #FFFFFF; /* white */
+    --color-ring: #02A95C; /* gofundme green */
+
+    /* Card Colors */
+    --color-card: #FFFFFF; /* white */
+    --color-card-foreground: #2D2D2D; /* dark gray */
+
+    /* Popover Colors */
+    --color-popover: #FFFFFF; /* white */
+    --color-popover-foreground: #2D2D2D; /* dark gray */
+
+    /* Muted Colors */
+    --color-muted: #F5F5F5; /* very light gray */
+    --color-muted-foreground: #767676; /* medium gray */
+
+    /* Primary Colors - GoFundMe Green */
+    --color-primary: #02A95C; /* gofundme green */
+    --color-primary-foreground: #FFFFFF; /* white */
+
+    /* Secondary Colors */
+    --color-secondary: #5C5C5C; /* medium dark gray */
+    --color-secondary-foreground: #FFFFFF; /* white */
+
+    /* Destructive Colors */
+    --color-destructive: #D0021B; /* gofundme red */
+    --color-destructive-foreground: #FFFFFF; /* white */
+
+    /* Accent Colors */
+    --color-accent: #FFB000; /* gofundme yellow/gold */
+    --color-accent-foreground: #2D2D2D; /* dark gray */
+
+    /* Success Colors */
+    --color-success: #02A95C; /* gofundme green */
+    --color-success-foreground: #FFFFFF; /* white */
+
+    /* Warning Colors */
+    --color-warning: #FFB000; /* yellow/gold */
+    --color-warning-foreground: #2D2D2D; /* dark gray */
+
+    /* Error Colors */
+    --color-error: #D0021B; /* gofundme red */
+    --color-error-foreground: #FFFFFF; /* white */
+  }
+
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer utilities {
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .elevation-1 {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .elevation-2 {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .animation-ease-out {
+    transition-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  /* Smooth page transitions */
+  .page-transition {
+    animation: pageEnter 0.3s ease-out;
+  }
+
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Card hover animations */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Smooth scroll */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Progress bar animation */
+  .progress-fill {
+    transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  /* Button press effect */
+  .button-press:active {
+    transform: scale(0.98);
+  }
+
+  /* Fade in animation */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* Scale in animation */
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Slide up animation */
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
