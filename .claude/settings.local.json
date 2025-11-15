@@ -51,7 +51,21 @@
       "Bash(powershell -Command \"Stop-Process -Id 19384,26784,28928,27428,11180,884,8032,5456 -Force\")",
       "Bash(dir:*)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Educational Funding Platform\n\nComplete educational crowdfunding platform with:\n- User authentication (student, donor, admin roles)\n- Campaign management and review workflow\n- Donation processing and tracking\n- Admin dashboard and analytics\n- Donor wall and milestone celebrations\n- Favorites and sharing features\n- Profile management system\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "Bash(.gitignore)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(timeout 10 powershell:*)",
+      "Bash(test:*)",
+      "Bash(timeout 5 powershell:*)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command \"Stop-Process -Name node -Force\")",
+      "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, StartTime, CommandLine | Format-List\")",
+      "Bash(powershell:*)"
     ],
     "deny": [],
     "ask": []

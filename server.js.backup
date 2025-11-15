@@ -11,6 +11,9 @@ const pool = require('./src/db/init-db');
 // Initialize upload service
 const { uploadSingle, uploadMultiple, processImage } = require('./upload-service');
 
+// Initialize profile routes
+const profileRoutes = require('./routes/profileRoutes')(pool);
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -21,7 +24,7 @@ app.use(express.json());
 // Rate limiting middleware - Protect API endpoints from abuse
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 1000, // TEMPORARILY INCREASED - Limit each IP to 1000 requests per windowMs (was 100)
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -209,59 +212,127 @@ app.post('/api/campaigns', async (req, res) => {
 // List Campaigns with filters, pagination, featured
 app.get('/api/campaigns', async (req, res) => {
   try {
-    const { search, location, university, category, status, sort, page = 1, limit = 6, featured } = req.query || {};
+    const {
+      search, location, university, category, status, sort, page = 1, limit = 6, featured,
+      fundingPercentage, timeRemaining, minAmount, maxAmount
+    } = req.query || {};
     const where = [];
     const params = [];
+    const having = [];
 
     // IMPORTANT: Only show published campaigns in public listings (unless status is explicitly provided)
     if (!status) {
-      where.push('status = ?');
+      where.push('c.status = ?');
       params.push('published');
     } else {
-      where.push('status = ?');
+      where.push('c.status = ?');
       params.push(status);
     }
 
     if (search) {
-      where.push('(title LIKE ? OR description LIKE ?)');
+      where.push('(c.title LIKE ? OR c.description LIKE ?)');
       params.push(`%${search}%`, `%${search}%`);
     }
     if (category) {
-      where.push('category = ?');
+      where.push('c.category = ?');
       params.push(category);
     }
     if (location) {
-      where.push('city = ?');
+      where.push('c.city = ?');
       params.push(location);
     }
     if (university) {
-      where.push('university = ?');
+      where.push('c.university = ?');
       params.push(university);
     }
     if (featured === 'true') {
-      where.push('featured = 1');
+      where.push('c.featured = 1');
+    }
+
+    // Amount range filters
+    if (minAmount) {
+      where.push('c.goal_amount >= ?');
+      params.push(Number(minAmount));
+    }
+    if (maxAmount) {
+      where.push('c.goal_amount <= ?');
+      params.push(Number(maxAmount));
+    }
+
+    // Time remaining filter (based on end_date)
+    if (timeRemaining) {
+      const now = new Date();
+      if (timeRemaining === 'ending-soon') {
+        // Ending in 7 days
+        const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        where.push('c.end_date IS NOT NULL AND c.end_date <= ?');
+        params.push(sevenDaysLater.toISOString().slice(0, 19).replace('T', ' '));
+      } else if (timeRemaining === 'this-week') {
+        // Ending this week (next 7 days)
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        where.push('c.end_date IS NOT NULL AND c.end_date <= ?');
+        params.push(nextWeek.toISOString().slice(0, 19).replace('T', ' '));
+      } else if (timeRemaining === 'this-month') {
+        // Ending this month (next 30 days)
+        const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+        where.push('c.end_date IS NOT NULL AND c.end_date <= ?');
+        params.push(nextMonth.toISOString().slice(0, 19).replace('T', ' '));
+      }
     }
 
     const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-    let orderSql = 'ORDER BY created_at DESC';
-    if (sort === 'goal') orderSql = 'ORDER BY goal_amount DESC';
-    if (sort === 'raised') orderSql = 'ORDER BY current_amount DESC';
+    // Sorting options
+    let orderSql = 'ORDER BY c.created_at DESC';
+    if (sort === 'goal') orderSql = 'ORDER BY c.goal_amount DESC';
+    if (sort === 'raised') orderSql = 'ORDER BY c.current_amount DESC';
+    if (sort === 'ending-soon') orderSql = 'ORDER BY c.end_date ASC';
+    if (sort === 'most-funded') orderSql = 'ORDER BY (c.current_amount / c.goal_amount) DESC';
+    if (sort === 'most-donors') orderSql = 'ORDER BY donor_count DESC';
 
     const pageNum = Math.max(1, parseInt(page) || 1);
     const limitNum = Math.max(1, parseInt(limit) || 6);
     const offset = (pageNum - 1) * limitNum;
 
-    const totalRows = await query(`SELECT COUNT(*) as c FROM campaigns ${whereSql}`, params);
-    const total = totalRows[0].c;
-
-    // Use direct values for LIMIT and OFFSET since they're already validated numbers
-    const sql = `SELECT id, title, description, goal_amount, current_amount, category, city, university, cover_image, status, created_at, end_date
-       FROM campaigns ${whereSql} ${orderSql} LIMIT ${limitNum} OFFSET ${offset}`;
+    // Query with donor count for sorting
+    const sql = `
+      SELECT c.id, c.title, c.description, c.goal_amount, c.current_amount, c.category, c.city,
+             c.university, c.cover_image, c.status, c.created_at, c.end_date,
+             COUNT(DISTINCT d.id) as donor_count
+      FROM campaigns c
+      LEFT JOIN donations d ON c.id = d.campaign_id
+      ${whereSql}
+      GROUP BY c.id
+      ${orderSql}
+      LIMIT ${limitNum} OFFSET ${offset}
+    `;
 
     const rows = await query(sql, params);
 
-    const campaigns = rows.map(r => {
+    // For funding percentage filter, we need to filter after the query
+    let filteredRows = rows;
+    if (fundingPercentage) {
+      filteredRows = rows.filter(r => {
+        const percentage = (r.current_amount / r.goal_amount) * 100;
+        if (fundingPercentage === '0-25') return percentage >= 0 && percentage < 25;
+        if (fundingPercentage === '25-50') return percentage >= 25 && percentage < 50;
+        if (fundingPercentage === '50-75') return percentage >= 50 && percentage < 75;
+        if (fundingPercentage === '75-100') return percentage >= 75 && percentage < 100;
+        if (fundingPercentage === '100+') return percentage >= 100;
+        return true;
+      });
+    }
+
+    // Get total count for pagination
+    const totalRows = await query(`
+      SELECT COUNT(DISTINCT c.id) as c
+      FROM campaigns c
+      LEFT JOIN donations d ON c.id = d.campaign_id
+      ${whereSql}
+    `, params);
+    const total = totalRows[0].c;
+
+    const campaigns = filteredRows.map(r => {
       const created = new Date(r.created_at);
       const end = r.end_date ? new Date(r.end_date) : null;
       let daysLeft = 0;
@@ -437,6 +508,105 @@ app.get('/api/campaigns/:id/donations', async (req, res) => {
     }));
 
     res.json({ success: true, donations: donors });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get donor wall data for a campaign
+app.get('/api/campaigns/:id/donor-wall', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    // Get top donors (highest amounts)
+    const topDonors = await query(
+      `SELECT
+        donor_name,
+        SUM(amount) as total_amount,
+        COUNT(*) as donation_count,
+        MIN(created_at) as first_donation,
+        is_anonymous
+       FROM donations
+       WHERE campaign_id = ?
+       GROUP BY donor_name, is_anonymous
+       ORDER BY total_amount DESC
+       LIMIT 5`,
+      [id]
+    );
+
+    // Get recent donors (most recent donations)
+    const recentDonors = await query(
+      `SELECT
+        donor_name,
+        amount,
+        created_at,
+        is_anonymous
+       FROM donations
+       WHERE campaign_id = ?
+       ORDER BY created_at DESC
+       LIMIT 5`,
+      [id]
+    );
+
+    // Get first donor (earliest donation)
+    const [firstDonor] = await query(
+      `SELECT
+        donor_name,
+        amount,
+        created_at,
+        is_anonymous
+       FROM donations
+       WHERE campaign_id = ?
+       ORDER BY created_at ASC
+       LIMIT 1`,
+      [id]
+    );
+
+    // Get donor statistics
+    const [stats] = await query(
+      `SELECT
+        COUNT(DISTINCT donor_name) as unique_donors,
+        COUNT(*) as total_donations,
+        AVG(amount) as average_donation,
+        SUM(amount) as total_raised
+       FROM donations
+       WHERE campaign_id = ?`,
+      [id]
+    );
+
+    const donorWall = {
+      topDonors: topDonors.map((d, index) => ({
+        rank: index + 1,
+        name: d.is_anonymous ? 'Anonymous Donor' : (d.donor_name || 'Donor'),
+        totalAmount: d.total_amount,
+        donationCount: d.donation_count,
+        firstDonation: d.first_donation,
+        isAnonymous: !!d.is_anonymous,
+        badge: index === 0 ? 'Top Donor' : null
+      })),
+      recentDonors: recentDonors.map(d => ({
+        name: d.is_anonymous ? 'Anonymous Donor' : (d.donor_name || 'Donor'),
+        amount: d.amount,
+        createdAt: d.created_at,
+        isAnonymous: !!d.is_anonymous
+      })),
+      firstDonor: firstDonor ? {
+        name: firstDonor.is_anonymous ? 'Anonymous Donor' : (firstDonor.donor_name || 'Donor'),
+        amount: firstDonor.amount,
+        createdAt: firstDonor.created_at,
+        isAnonymous: !!firstDonor.is_anonymous,
+        badge: 'First Donor'
+      } : null,
+      statistics: {
+        uniqueDonors: stats?.unique_donors || 0,
+        totalDonations: stats?.total_donations || 0,
+        averageDonation: stats?.average_donation || 0,
+        totalRaised: stats?.total_raised || 0
+      }
+    };
+
+    res.json({ success: true, donorWall });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -678,6 +848,28 @@ app.get('/api/users/:id/favorites', async (req, res) => {
   }
 });
 
+// Check if campaign is favorited by user
+app.get('/api/campaigns/:id/favorite/check', async (req, res) => {
+  try {
+    const campaignId = Number(req.params.id);
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.json({ success: true, isFavorited: false });
+    }
+
+    const rows = await query(
+      'SELECT id FROM favorites WHERE user_id = ? AND campaign_id = ?',
+      [Number(userId), campaignId]
+    );
+
+    res.json({ success: true, isFavorited: rows.length > 0 });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Metrics
 app.post('/api/campaigns/:id/view', async (req, res) => {
   try {
@@ -697,6 +889,83 @@ app.post('/api/campaigns/:id/share', async (req, res) => {
     await query('INSERT IGNORE INTO campaign_metrics (campaign_id) VALUES (?)', [id]);
     await query('UPDATE campaign_metrics SET share_count = share_count + 1 WHERE campaign_id = ?', [id]);
     res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Campaign Review Workflow
+// Submit campaign for review (student action)
+app.post('/api/campaigns/:id/submit', async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { userId } = req.body || {};
+
+    // Check if campaign exists and belongs to user
+    const [campaign] = await query('SELECT id, user_id, status FROM campaigns WHERE id = ?', [id]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+    if (campaign.user_id !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+    if (campaign.status === 'pending') {
+      return res.json({ success: true, message: 'Campaign already submitted for review' });
+    }
+
+    // Update status to pending
+    await query('UPDATE campaigns SET status = ?, updated_at = NOW() WHERE id = ?', ['pending', id]);
+
+    // Log status history if table exists
+    try {
+      await query(
+        'INSERT INTO campaign_status_history (campaign_id, old_status, new_status, changed_by, reason) VALUES (?, ?, ?, ?, ?)',
+        [id, campaign.status, 'pending', userId, 'Campaign submitted for admin review']
+      );
+    } catch (err) {
+      // Table might not exist, ignore
+      console.log('campaign_status_history table not found, skipping');
+    }
+
+    res.json({ success: true, message: 'Campaign submitted for review' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user's own campaigns (student dashboard)
+app.get('/api/users/:userId/campaigns', async (req, res) => {
+  try {
+    const userId = Number(req.params.userId);
+
+    const rows = await query(
+      `SELECT id, title, description, goal_amount, current_amount, category, city, university,
+              cover_image, status, created_at, end_date, featured
+       FROM campaigns
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const campaigns = rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      goalAmount: r.goal_amount,
+      currentAmount: r.current_amount,
+      category: r.category,
+      city: r.city,
+      university: r.university,
+      coverImage: r.cover_image,
+      status: r.status,
+      createdAt: r.created_at,
+      endDate: r.end_date,
+      featured: r.featured === 1
+    }));
+
+    res.json({ success: true, campaigns });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -1429,6 +1698,648 @@ app.get('/api/currency/convert-mad', async (req, res) => {
 // ==== ADMIN ENDPOINTS ====
 
 // Admin Statistics
+
+// ===== COMPREHENSIVE ADMIN SYSTEM =====
+// Helper functions for logging
+
+async function logAdminAction(adminId, adminEmail, actionType, entityType, entityId, oldValue, newValue, details) {
+  try {
+    await query(
+      `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [adminId, adminEmail, actionType, entityType, entityId, JSON.stringify(oldValue), JSON.stringify(newValue), details]
+    );
+  } catch (err) {
+    console.error('Error logging admin action:', err);
+  }
+}
+
+async function logSystemActivity(userId, userEmail, activityType, action, details, success = true, errorMessage = null) {
+  try {
+    await query(
+      `INSERT INTO system_activity_log (user_id, user_email, activity_type, action, details, success, error_message)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [userId, userEmail, activityType, action, JSON.stringify(details), success, errorMessage]
+    );
+  } catch (err) {
+    console.error('Error logging system activity:', err);
+  }
+}
+
+// ===== USER/PROFILE MANAGEMENT =====
+
+// Get all users with filters
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const { status, role, verified, search, page = 1, limit = 20 } = req.query;
+    const where = [];
+    const params = [];
+
+    if (status) {
+      where.push('status = ?');
+      params.push(status);
+    }
+    if (role) {
+      where.push('role = ?');
+      params.push(role);
+    }
+    if (verified !== undefined) {
+      where.push('verified = ?');
+      params.push(verified === 'true' ? 1 : 0);
+    }
+    if (search) {
+      where.push('(email LIKE ? OR id = ?)');
+      params.push(`%${search}%`, parseInt(search) || 0);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const [total] = await query(`SELECT COUNT(*) as count FROM users ${whereSql}`, params);
+
+    const users = await query(
+      `SELECT id, email, role, status, verified, created_at, profile_approved_at, rejection_reason
+       FROM users ${whereSql}
+       ORDER BY created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+
+    res.json({
+      success: true,
+      users,
+      total: total.count,
+      page: parseInt(page),
+      totalPages: Math.ceil(total.count / parseInt(limit))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get user details with full history
+app.get('/api/admin/users/:id', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const campaigns = await query('SELECT * FROM campaigns WHERE user_id = ?', [userId]);
+    const donations = await query('SELECT * FROM donations WHERE user_id = ?', [userId]);
+
+    const statusHistory = await query(
+      `SELECT h.*, u.email as changed_by_email
+       FROM user_status_history h
+       LEFT JOIN users u ON h.changed_by = u.id
+       WHERE h.user_id = ?
+       ORDER BY h.created_at DESC`,
+      [userId]
+    );
+
+    const auditLog = await query(
+      `SELECT * FROM audit_log
+       WHERE entity_type = 'user' AND entity_id = ?
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      user,
+      campaigns,
+      donations,
+      statusHistory,
+      auditLog
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Approve user profile (WORKING VERSION)
+app.post('/api/admin/users/:id/approve', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, notes } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query(
+      `UPDATE users
+       SET verified = 1,
+           status = 'active',
+           profile_approved_at = NOW(),
+           approved_by = ?
+       WHERE id = ?`,
+      [adminId, userId]
+    );
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'active', ?, ?)`,
+      [userId, oldStatus, adminId, notes || 'Profile approved by admin']
+    );
+
+    await logAdminAction(
+      adminId,
+      adminEmail,
+      'APPROVE_PROFILE',
+      'user',
+      userId,
+      { status: oldStatus, verified: user.verified },
+      { status: 'active', verified: 1 },
+      `Profile approved. Notes: ${notes || 'None'}`
+    );
+
+    await logSystemActivity(
+      userId,
+      user.email,
+      'PROFILE_VERIFICATION',
+      'APPROVED',
+      { approvedBy: adminEmail, notes }
+    );
+
+    await query(
+      'DELETE FROM admin_notifications WHERE notification_type = ? AND entity_id = ?',
+      ['profile_review', userId]
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile approved successfully',
+      user: {
+        id: userId,
+        email: user.email,
+        status: 'active',
+        verified: true
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reject user profile (WORKING VERSION)
+app.post('/api/admin/users/:id/reject', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, reason } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query(
+      `UPDATE users
+       SET verified = 0,
+           status = 'rejected',
+           rejection_reason = ?
+       WHERE id = ?`,
+      [reason, userId]
+    );
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'rejected', ?, ?)`,
+      [userId, oldStatus, adminId, reason]
+    );
+
+    await logAdminAction(
+      adminId,
+      adminEmail,
+      'REJECT_PROFILE',
+      'user',
+      userId,
+      { status: oldStatus },
+      { status: 'rejected' },
+      `Profile rejected. Reason: ${reason}`
+    );
+
+    res.json({
+      success: true,
+      message: 'Profile rejected',
+      user: {
+        id: userId,
+        email: user.email,
+        status: 'rejected',
+        reason
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Suspend user
+app.post('/api/admin/users/:id/suspend', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, reason } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query('UPDATE users SET status = ?, rejection_reason = ? WHERE id = ?', ['suspended', reason, userId]);
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'suspended', ?, ?)`,
+      [userId, oldStatus, adminId, reason]
+    );
+
+    await logAdminAction(adminId, adminEmail, 'SUSPEND_USER', 'user', userId, { status: oldStatus }, { status: 'suspended' }, reason);
+
+    res.json({ success: true, message: 'User suspended' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reactivate user
+app.post('/api/admin/users/:id/reactivate', async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id);
+    const { adminId, adminEmail, notes } = req.body;
+
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [userId]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    await query('UPDATE users SET status = ?, verified = 1, rejection_reason = NULL WHERE id = ?', ['active', userId]);
+
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'active', ?, ?)`,
+      [userId, oldStatus, adminId, notes || 'Reactivated by admin']
+    );
+
+    await logAdminAction(adminId, adminEmail, 'REACTIVATE_USER', 'user', userId, { status: oldStatus }, { status: 'active' }, notes);
+
+    res.json({ success: true, message: 'User reactivated' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ===== CAMPAIGN MANAGEMENT =====
+
+// Get all campaigns for admin
+app.get('/api/admin/campaigns', async (req, res) => {
+  try {
+    const { status, flagged, search, page = 1, limit = 20 } = req.query;
+    const where = [];
+    const params = [];
+
+    if (status) {
+      where.push('c.status = ?');
+      params.push(status);
+    }
+    if (flagged === 'true') {
+      where.push('c.flagged = 1');
+    }
+    if (search) {
+      where.push('(c.title LIKE ? OR c.id = ? OR u.email LIKE ?)');
+      params.push(`%${search}%`, parseInt(search) || 0, `%${search}%`);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const [total] = await query(
+      `SELECT COUNT(*) as count FROM campaigns c LEFT JOIN users u ON c.user_id = u.id ${whereSql}`,
+      params
+    );
+
+    const campaigns = await query(
+      `SELECT c.*, u.email as creator_email, u.status as user_status
+       FROM campaigns c
+       LEFT JOIN users u ON c.user_id = u.id
+       ${whereSql}
+       ORDER BY c.created_at DESC
+       LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+
+    res.json({
+      success: true,
+      campaigns,
+      total: total.count,
+      page: parseInt(page),
+      totalPages: Math.ceil(total.count / parseInt(limit))
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get campaign details with full history
+app.get('/api/admin/campaigns/:id/details', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+
+    const [campaign] = await query('SELECT c.*, u.email as creator_email FROM campaigns c LEFT JOIN users u ON c.user_id = u.id WHERE c.id = ?', [campaignId]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const donations = await query('SELECT * FROM donations WHERE campaign_id = ? ORDER BY created_at DESC', [campaignId]);
+    const updates = await query('SELECT * FROM campaign_updates WHERE campaign_id = ? ORDER BY created_at DESC', [campaignId]);
+    const comments = await query('SELECT * FROM campaign_comments WHERE campaign_id = ? ORDER BY created_at DESC', [campaignId]);
+
+    const statusHistory = await query(
+      `SELECT h.*, u.email as changed_by_email
+       FROM campaign_status_history h
+       LEFT JOIN users u ON h.changed_by = u.id
+       WHERE h.campaign_id = ?
+       ORDER BY h.created_at DESC`,
+      [campaignId]
+    );
+
+    const auditLog = await query(
+      `SELECT * FROM audit_log WHERE entity_type = 'campaign' AND entity_id = ? ORDER BY created_at DESC LIMIT 50`,
+      [campaignId]
+    );
+
+    res.json({
+      success: true,
+      campaign,
+      donations,
+      updates,
+      comments,
+      statusHistory,
+      auditLog
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: Approve campaign
+app.post('/api/admin/campaigns/:id/approve', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    const { adminId, adminEmail, notes } = req.body;
+
+    // Get current campaign
+    const [campaign] = await query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const oldStatus = campaign.status;
+
+    // Update campaign status to published (approved)
+    await query(
+      `UPDATE campaigns
+       SET status = 'published',
+           approved_at = NOW(),
+           approved_by = ?,
+           moderation_notes = ?
+       WHERE id = ?`,
+      [adminId, notes || 'Campaign approved', campaignId]
+    );
+
+    // Log status history
+    try {
+      await query(
+        `INSERT INTO campaign_status_history (campaign_id, old_status, new_status, changed_by, reason)
+         VALUES (?, ?, 'published', ?, ?)`,
+        [campaignId, oldStatus, adminId, notes || 'Campaign approved by admin']
+      );
+    } catch (err) {
+      console.log('campaign_status_history table not found, skipping');
+    }
+
+    // Log admin action in audit log
+    try {
+      await query(
+        `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+         VALUES (?, ?, 'APPROVE_CAMPAIGN', 'campaign', ?, ?, ?, ?)`,
+        [adminId, adminEmail, campaignId, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'published' }), notes || 'Campaign approved']
+      );
+    } catch (err) {
+      console.log('audit_log table not found, skipping');
+    }
+
+    res.json({ success: true, message: 'Campaign approved successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: Reject campaign
+app.post('/api/admin/campaigns/:id/reject', async (req, res) => {
+  try {
+    const campaignId = parseInt(req.params.id);
+    const { adminId, adminEmail, reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({ error: 'Rejection reason is required' });
+    }
+
+    // Get current campaign
+    const [campaign] = await query('SELECT * FROM campaigns WHERE id = ?', [campaignId]);
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' });
+    }
+
+    const oldStatus = campaign.status;
+
+    // Update campaign status to rejected
+    await query(
+      `UPDATE campaigns
+       SET status = 'rejected',
+           rejection_reason = ?,
+           moderation_notes = ?
+       WHERE id = ?`,
+      [reason, reason, campaignId]
+    );
+
+    // Log status history
+    try {
+      await query(
+        `INSERT INTO campaign_status_history (campaign_id, old_status, new_status, changed_by, reason)
+         VALUES (?, ?, 'rejected', ?, ?)`,
+        [campaignId, oldStatus, adminId, reason]
+      );
+    } catch (err) {
+      console.log('campaign_status_history table not found, skipping');
+    }
+
+    // Log admin action in audit log
+    try {
+      await query(
+        `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+         VALUES (?, ?, 'REJECT_CAMPAIGN', 'campaign', ?, ?, ?, ?)`,
+        [adminId, adminEmail, campaignId, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'rejected' }), reason]
+      );
+    } catch (err) {
+      console.log('audit_log table not found, skipping');
+    }
+
+    res.json({ success: true, message: 'Campaign rejected' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get admin dashboard stats
+app.get('/api/admin/dashboard-stats', async (req, res) => {
+  try {
+    const [totalUsers] = await query('SELECT COUNT(*) as count FROM users');
+    const [activeUsers] = await query('SELECT COUNT(*) as count FROM users WHERE status = "active"');
+    const [pendingUsers] = await query('SELECT COUNT(*) as count FROM users WHERE status = "pending"');
+    const [suspendedUsers] = await query('SELECT COUNT(*) as count FROM users WHERE status = "suspended"');
+
+    const [totalCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns');
+    const [activeCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE status = "active"');
+    const [pendingCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE status IN ("draft", "pending")');
+    const [flaggedCampaigns] = await query('SELECT COUNT(*) as count FROM campaigns WHERE flagged = 1');
+
+    const [totalDonations] = await query('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM donations');
+    const [todayDonations] = await query('SELECT COUNT(*) as count, COALESCE(SUM(amount), 0) as total FROM donations WHERE DATE(created_at) = CURDATE()');
+
+    const [unreadNotifications] = await query('SELECT COUNT(*) as count FROM admin_notifications WHERE read_status = 0');
+    const [recentAuditLogs] = await query('SELECT COUNT(*) as count FROM audit_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)');
+
+    res.json({
+      success: true,
+      stats: {
+        users: {
+          total: totalUsers.count,
+          active: activeUsers.count,
+          pending: pendingUsers.count,
+          suspended: suspendedUsers.count
+        },
+        campaigns: {
+          total: totalCampaigns.count,
+          active: activeCampaigns.count,
+          pending: pendingCampaigns.count,
+          flagged: flaggedCampaigns.count
+        },
+        donations: {
+          total: totalDonations.count,
+          totalAmount: totalDonations.total,
+          today: todayDonations.count,
+          todayAmount: todayDonations.total
+        },
+        notifications: {
+          unread: unreadNotifications.count
+        },
+        activity: {
+          last24Hours: recentAuditLogs.count
+        }
+      }
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get audit log
+app.get('/api/admin/audit-log', async (req, res) => {
+  try {
+    const { actionType, entityType, adminId, page = 1, limit = 100 } = req.query;
+    const where = [];
+    const params = [];
+
+    if (actionType) {
+      where.push('action_type = ?');
+      params.push(actionType);
+    }
+    if (entityType) {
+      where.push('entity_type = ?');
+      params.push(entityType);
+    }
+    if (adminId) {
+      where.push('admin_id = ?');
+      params.push(adminId);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const logs = await query(
+      `SELECT * FROM audit_log ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      [...params, parseInt(limit), offset]
+    );
+
+    res.json({ success: true, logs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get admin notifications
+app.get('/api/admin/notifications', async (req, res) => {
+  try {
+    const { read } = req.query;
+    const where = [];
+    const params = [];
+
+    if (read !== undefined) {
+      where.push('read_status = ?');
+      params.push(read === 'true' ? 1 : 0);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const notifications = await query(
+      `SELECT * FROM admin_notifications ${whereSql} ORDER BY created_at DESC LIMIT 100`,
+      params
+    );
+
+    res.json({ success: true, notifications });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Mark notification as read
+app.post('/api/admin/notifications/:id/read', async (req, res) => {
+  try {
+    const notificationId = parseInt(req.params.id);
+    await query('UPDATE admin_notifications SET read_status = 1 WHERE id = ?', [notificationId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Old admin endpoints kept for backwards compatibility
 app.get('/api/admin/stats', async (req, res) => {
   try {
     const [totalUsers] = await query('SELECT COUNT(*) as count FROM users');
@@ -1499,30 +2410,6 @@ app.get('/api/admin/campaigns/all', async (req, res) => {
   }
 });
 
-// Approve campaign
-app.post('/api/admin/campaigns/:id/approve', async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    await query('UPDATE campaigns SET status = ? WHERE id = ?', ['published', id]);
-    res.json({ success: true, message: 'Campaign approved' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Reject campaign (used for denying draft/pending campaigns)
-app.post('/api/admin/campaigns/:id/reject', async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    await query('UPDATE campaigns SET status = ? WHERE id = ?', ['rejected', id]);
-    res.json({ success: true, message: 'Campaign rejected' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
 // Suspend campaign (used for suspending published campaigns)
 app.post('/api/admin/campaigns/:id/suspend', async (req, res) => {
   try {
@@ -1562,7 +2449,7 @@ app.get('/api/admin/profiles/pending', async (req, res) => {
              MAX(c.category) as field_of_study
       FROM users u
       LEFT JOIN campaigns c ON c.user_id = u.id
-      WHERE u.role = 'student'
+      WHERE u.role = 'student' AND u.status = 'pending'
       GROUP BY u.id
       ORDER BY u.created_at DESC
     `);
@@ -1574,11 +2461,45 @@ app.get('/api/admin/profiles/pending', async (req, res) => {
   }
 });
 
-// Approve profile (activate user)
+// Approve profile (activate user) - FIXED VERSION
 app.post('/api/admin/profiles/:id/approve', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    // No verified column, so we just confirm the action
+    const { adminId = 1, adminEmail = 'admin@edufund.com', notes = 'Profile approved' } = req.body || {};
+
+    // Get current user
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    // Update user status
+    await query(
+      `UPDATE users
+       SET verified = 1,
+           status = 'active',
+           profile_approved_at = NOW(),
+           approved_by = ?
+       WHERE id = ?`,
+      [adminId, id]
+    );
+
+    // Log status history
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'active', ?, ?)`,
+      [id, oldStatus, adminId, notes]
+    );
+
+    // Log admin action
+    await query(
+      `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+       VALUES (?, ?, 'APPROVE_PROFILE', 'user', ?, ?, ?, ?)`,
+      [adminId, adminEmail, id, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'active' }), notes]
+    );
+
     res.json({ success: true, message: 'Profile validated' });
   } catch (err) {
     console.error(err);
@@ -1586,11 +2507,44 @@ app.post('/api/admin/profiles/:id/approve', async (req, res) => {
   }
 });
 
-// Reject profile (could mark as inactive or delete)
+// Reject profile (could mark as inactive or delete) - FIXED VERSION
 app.post('/api/admin/profiles/:id/reject', async (req, res) => {
   try {
     const id = Number(req.params.id);
-    // No verified column, so we just confirm the action
+    const { adminId = 1, adminEmail = 'admin@edufund.com', reason = 'Profile rejected' } = req.body || {};
+
+    // Get current user
+    const [user] = await query('SELECT * FROM users WHERE id = ?', [id]);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const oldStatus = user.status;
+
+    // Update user status
+    await query(
+      `UPDATE users
+       SET verified = 0,
+           status = 'rejected',
+           rejection_reason = ?
+       WHERE id = ?`,
+      [reason, id]
+    );
+
+    // Log status history
+    await query(
+      `INSERT INTO user_status_history (user_id, old_status, new_status, changed_by, reason)
+       VALUES (?, ?, 'rejected', ?, ?)`,
+      [id, oldStatus, adminId, reason]
+    );
+
+    // Log admin action
+    await query(
+      `INSERT INTO audit_log (admin_id, admin_email, action_type, entity_type, entity_id, old_value, new_value, details)
+       VALUES (?, ?, 'REJECT_PROFILE', 'user', ?, ?, ?, ?)`,
+      [adminId, adminEmail, id, JSON.stringify({ status: oldStatus }), JSON.stringify({ status: 'rejected' }), reason]
+    );
+
     res.json({ success: true, message: 'Profile rejected' });
   } catch (err) {
     console.error(err);
@@ -1602,7 +2556,7 @@ app.post('/api/admin/profiles/:id/reject', async (req, res) => {
 app.post('/api/admin/reports/monthly', async (req, res) => {
   try {
     const { jsPDF } = require('jspdf');
-    const autoTable = require('jspdf-autotable').default;
+    require('jspdf-autotable'); // This extends jsPDF with autoTable method
 
     // Fetch monthly data
     const [totalRevenue] = await query('SELECT COALESCE(SUM(amount), 0) as total FROM donations WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 MONTH)');
@@ -1706,6 +2660,9 @@ try {
   console.warn('Email automation service not loaded:', err.message);
   console.warn('To enable email automation, configure EMAIL_SERVICE, EMAIL_USER, and EMAIL_PASSWORD in .env');
 }
+
+// ========== PROFILE ROUTES ==========
+app.use('/api', profileRoutes);
 
 // Catch-all route to serve the React app (exclude API and embed routes)
 app.get(/^(?!\/api|\/embed).*/, (req, res) => {

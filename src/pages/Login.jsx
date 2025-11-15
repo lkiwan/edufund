@@ -20,7 +20,17 @@ const Login = () => {
   const [registerEmail, setRegisterEmail] = useState('');
   const [registerPassword, setRegisterPassword] = useState('');
   const [registerConfirmPassword, setRegisterConfirmPassword] = useState('');
+  const [registerFullName, setRegisterFullName] = useState('');
+  const [registerPhone, setRegisterPhone] = useState('');
   const [userType, setUserType] = useState('student');
+
+  // Password visibility toggles
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Password strength
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, label: '', color: '' });
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -31,6 +41,46 @@ const Login = () => {
       redirectToDashboard(userRole);
     }
   }, []);
+
+  // Calculate password strength
+  useEffect(() => {
+    if (registerPassword) {
+      const strength = calculatePasswordStrength(registerPassword);
+      setPasswordStrength(strength);
+    } else {
+      setPasswordStrength({ score: 0, label: '', color: '' });
+    }
+  }, [registerPassword]);
+
+  const calculatePasswordStrength = (password) => {
+    let score = 0;
+    if (!password) return { score: 0, label: '', color: '' };
+
+    // Length
+    if (password.length >= 8) score += 1;
+    if (password.length >= 12) score += 1;
+
+    // Contains lowercase
+    if (/[a-z]/.test(password)) score += 1;
+
+    // Contains uppercase
+    if (/[A-Z]/.test(password)) score += 1;
+
+    // Contains numbers
+    if (/\d/.test(password)) score += 1;
+
+    // Contains special characters
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+
+    // Determine label and color
+    if (score <= 2) {
+      return { score, label: 'Weak', color: 'bg-red-500' };
+    } else if (score <= 4) {
+      return { score, label: 'Medium', color: 'bg-yellow-500' };
+    } else {
+      return { score, label: 'Strong', color: 'bg-green-500' };
+    }
+  };
 
   const redirectToDashboard = (role) => {
     if (role === 'student') {
@@ -74,14 +124,44 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (registerPassword !== registerConfirmPassword) {
-      setError('Passwords do not match');
+    // Enhanced validation
+    if (!registerFullName.trim()) {
+      setError('Please enter your full name');
       return;
     }
 
-    if (registerPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (!registerEmail.trim()) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registerEmail)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    if (!registerPhone.trim()) {
+      setError('Please enter your phone number');
+      return;
+    }
+
+    if (!/^[\d\s\-\+\(\)]+$/.test(registerPhone)) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+
+    if (registerPassword.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (passwordStrength.score < 3) {
+      setError('Please use a stronger password (add uppercase, numbers, or special characters)');
+      return;
+    }
+
+    if (registerPassword !== registerConfirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -91,6 +171,8 @@ const Login = () => {
       const response = await api.auth.register({
         email: registerEmail,
         password: registerPassword,
+        full_name: registerFullName,
+        phone: registerPhone,
         role: userType
       });
 
@@ -229,14 +311,24 @@ const Login = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Password
                     </label>
-                    <input
-                      type="password"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      required
-                      placeholder="Enter your password"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showLoginPassword ? 'text' : 'password'}
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        required
+                        placeholder="Enter your password"
+                        className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        <Icon name={showLoginPassword ? 'EyeOff' : 'Eye'} size={20} />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -267,7 +359,21 @@ const Login = () => {
                 <form onSubmit={handleRegister} className="space-y-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email Address
+                      Full Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={registerFullName}
+                      onChange={(e) => setRegisterFullName(e.target.value)}
+                      required
+                      placeholder="Enter your full name"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address *
                     </label>
                     <input
                       type="email"
@@ -281,30 +387,92 @@ const Login = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Password
+                      Phone Number *
                     </label>
                     <input
-                      type="password"
-                      value={registerPassword}
-                      onChange={(e) => setRegisterPassword(e.target.value)}
+                      type="tel"
+                      value={registerPhone}
+                      onChange={(e) => setRegisterPhone(e.target.value)}
                       required
-                      placeholder="At least 6 characters"
+                      placeholder="+212 6XX XXX XXX"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Confirm Password
+                      Password *
                     </label>
-                    <input
-                      type="password"
-                      value={registerConfirmPassword}
-                      onChange={(e) => setRegisterConfirmPassword(e.target.value)}
-                      required
-                      placeholder="Confirm your password"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showRegisterPassword ? 'text' : 'password'}
+                        value={registerPassword}
+                        onChange={(e) => setRegisterPassword(e.target.value)}
+                        required
+                        placeholder="At least 8 characters"
+                        className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowRegisterPassword(!showRegisterPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        <Icon name={showRegisterPassword ? 'EyeOff' : 'Eye'} size={20} />
+                      </button>
+                    </div>
+
+                    {/* Password Strength Indicator */}
+                    {registerPassword && (
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-gray-600">Password strength:</span>
+                          <span className={`text-xs font-medium ${
+                            passwordStrength.score <= 2 ? 'text-red-600' :
+                            passwordStrength.score <= 4 ? 'text-yellow-600' :
+                            'text-green-600'
+                          }`}>
+                            {passwordStrength.label}
+                          </span>
+                        </div>
+                        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 ${passwordStrength.color}`}
+                            style={{ width: `${(passwordStrength.score / 6) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Use 8+ characters with uppercase, lowercase, numbers & symbols
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirm Password *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={registerConfirmPassword}
+                        onChange={(e) => setRegisterConfirmPassword(e.target.value)}
+                        required
+                        placeholder="Confirm your password"
+                        className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        <Icon name={showConfirmPassword ? 'EyeOff' : 'Eye'} size={20} />
+                      </button>
+                    </div>
+                    {registerConfirmPassword && registerPassword !== registerConfirmPassword && (
+                      <p className="text-xs text-red-600 mt-1">Passwords do not match</p>
+                    )}
                   </div>
 
                   <div>

@@ -93,6 +93,12 @@ export const campaignsAPI = {
     }),
 };
 
+// ==== STATS API ====
+
+export const statsAPI = {
+  homepage: () => apiRequest('/stats/homepage'),
+};
+
 // ==== DONATIONS API ====
 
 export const donationsAPI = {
@@ -422,6 +428,7 @@ const api = {
   notifications: notificationsAPI,
   upload: uploadAPI,
   embed: embedAPI,
+  stats: statsAPI,
   admin: adminAPI,
 };
 

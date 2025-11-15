@@ -70,13 +70,13 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Auth: Register
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password, role } = req.body || {};
+  const { email, password, role, full_name, phone } = req.body || {};
 
-  console.log('Registration attempt:', { email, role, hasPassword: !!password });
+  console.log('Registration attempt:', { email, role, full_name, phone, hasPassword: !!password });
 
   if (!email || !password) {
     console.log('Missing fields in registration');
-    return res.status(400).json({ error: 'Missing fields' });
+    return res.status(400).json({ error: 'Email and password are required' });
   }
 
   try {
@@ -91,16 +91,18 @@ app.post('/api/auth/register', async (req, res) => {
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(password, salt);
 
-    // Insert user
+    // Insert user with additional fields
     const result = await query(
-      'INSERT INTO users (email, password, role) VALUES (?, ?, ?)',
-      [email, hashedPassword, role || 'student']
+      'INSERT INTO users (email, password, role, full_name, phone) VALUES (?, ?, ?, ?, ?)',
+      [email, hashedPassword, role || 'student', full_name || null, phone || null]
     );
 
     const newUser = {
       id: result.insertId,
       email,
-      role: role || 'student'
+      role: role || 'student',
+      full_name: full_name || null,
+      phone: phone || null
     };
 
     console.log('User registered successfully:', newUser.email);
@@ -1389,7 +1391,7 @@ app.get('/api/export/receipt/:donationId', async (req, res) => {
     doc.text(`≈ $${amountUSD.toFixed(2)} USD  |  ≈ €${amountEUR.toFixed(2)} EUR`, pageWidth - 20, currentY + 22, { align: 'right' });
 
     // Detailed Currency Conversion Table
-    doc.autoTable({
+    autoTable(doc, {
       startY: currentY + 30,
       head: [['Currency', 'Amount', 'Exchange Rate', 'Date']],
       body: [
@@ -1516,7 +1518,7 @@ app.get('/api/export/receipt/:donationId', async (req, res) => {
 app.post('/api/export/analytics-pdf', async (req, res) => {
   try {
     const { jsPDF } = require('jspdf');
-    require('jspdf-autotable'); // This extends jsPDF with autoTable method
+    const autoTable = require('jspdf-autotable').default;
     const { timeRange = 'all' } = req.body;
 
     // Fetch analytics data (reuse from global analytics endpoint)
@@ -1566,7 +1568,7 @@ app.post('/api/export/analytics-pdf', async (req, res) => {
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, pageWidth - 20, 45, { align: 'right' });
 
     // Key metrics table
-    doc.autoTable({
+    autoTable(doc, {
       startY: 55,
       head: [['Metric', 'Value']],
       body: [
@@ -1588,7 +1590,7 @@ app.post('/api/export/analytics-pdf', async (req, res) => {
       doc.setFont('helvetica', 'bold');
       doc.text('Funding by Field of Study', 20, startY);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: startY + 5,
         head: [['Field', 'Campaigns', 'Total Collected (MAD)', 'Average']],
         body: byField.map(item => [
@@ -1610,7 +1612,7 @@ app.post('/api/export/analytics-pdf', async (req, res) => {
       doc.setFont('helvetica', 'bold');
       doc.text('Funding by Region', 20, startY);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: startY + 5,
         head: [['City', 'Campaigns', 'Total Collected (MAD)', 'Percentage']],
         body: byRegion.map(item => {
@@ -2596,7 +2598,7 @@ app.post('/api/admin/reports/monthly', async (req, res) => {
     doc.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - 20, 45, { align: 'right' });
 
     // Summary table
-    doc.autoTable({
+    autoTable(doc, {
       startY: 55,
       head: [['Indicateur', 'Valeur']],
       body: [
@@ -2618,7 +2620,7 @@ app.post('/api/admin/reports/monthly', async (req, res) => {
       doc.setFont('helvetica', 'bold');
       doc.text('Top 10 Campagnes du Mois', 20, startY);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: startY + 5,
         head: [['Campagne', 'Étudiant', 'Collecté (MAD)', 'Objectif (MAD)', 'Taux']],
         body: topCampaigns.map(c => [

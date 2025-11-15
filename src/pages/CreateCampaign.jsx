@@ -207,7 +207,16 @@ const CreateCampaign = () => {
 
     try {
       const userEmail = localStorage.getItem('user-email');
+      const userId = parseInt(localStorage.getItem('user-id'));
       let coverImageUrl = formData.coverImage || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800';
+
+      // Validate user ID exists
+      if (!userId) {
+        setError('User session expired. Please log in again.');
+        setLoading(false);
+        navigate('/login');
+        return;
+      }
 
       // Upload image if a file was selected
       if (imageFile) {
@@ -226,10 +235,6 @@ const CreateCampaign = () => {
         }
         setUploadingImage(false);
       }
-
-      // Get user ID from email
-      // For now, we'll use a placeholder. In production, you'd fetch this from the backend
-      const userId = 2; // Placeholder student user ID
 
       const campaignData = {
         title: formData.title,

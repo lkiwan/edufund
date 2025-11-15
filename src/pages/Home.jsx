@@ -44,17 +44,30 @@ const Home = () => {
         setFeaturedCampaigns(featuredData.campaigns || []);
       }
 
-      // Calculate stats
-      const totalCampaignsData = await api.campaigns.list({});
-      if (totalCampaignsData.success) {
-        const allCampaigns = totalCampaignsData.campaigns || [];
-        const totalRaised = allCampaigns.reduce((sum, c) => sum + (c.currentAmount || 0), 0);
-        setStats({
-          totalCampaigns: allCampaigns.length,
-          totalRaised: totalRaised,
-          totalStudents: allCampaigns.length,
-          totalDonors: 500 // Mock for now
-        });
+      // Fetch homepage stats from backend
+      try {
+        const statsRes = await api.stats.homepage();
+        if (statsRes?.success && statsRes?.stats) {
+          setStats({
+            totalCampaigns: statsRes.stats.totalCampaigns || 0,
+            totalRaised: statsRes.stats.totalRaised || 0,
+            totalStudents: statsRes.stats.totalStudents || 0,
+            totalDonors: statsRes.stats.totalDonors || 0,
+          });
+        }
+      } catch (err) {
+        // Fallback: compute stats from campaigns if backend stats endpoint fails
+        const totalCampaignsData = await api.campaigns.list({});
+        if (totalCampaignsData.success) {
+          const allCampaigns = totalCampaignsData.campaigns || [];
+          const totalRaised = allCampaigns.reduce((sum, c) => sum + (c.currentAmount || 0), 0);
+          setStats({
+            totalCampaigns: allCampaigns.length,
+            totalRaised: totalRaised,
+            totalStudents: allCampaigns.length,
+            totalDonors: 500
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching campaigns:', error);
