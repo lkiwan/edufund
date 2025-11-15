@@ -131,14 +131,24 @@ const Discover = () => {
     <div className="min-h-screen bg-white">
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="pt-24 pb-8 bg-gradient-to-br from-emerald-50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-gray-900 mb-4">
-              Discover Campaigns
+      {/* Hero Section - Magnificent Style */}
+      <section className="relative pt-24 pb-12 overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-white to-teal-50" />
+
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-teal-100/50 to-transparent rounded-full blur-3xl" />
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10 animate-fade-in">
+            <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 mb-6 leading-tight">
+              Discover
+              <span className="block mt-2 bg-gradient-to-r from-primary to-teal-600 bg-clip-text text-transparent">
+                Campaigns
+              </span>
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto font-medium">
               Browse student campaigns and make a difference in someone's educational journey
             </p>
           </div>
@@ -449,7 +459,7 @@ const Discover = () => {
   );
 };
 
-// Campaign Card Component (Reused from Home)
+// Campaign Card Component (Matching Home Page Style)
 const CampaignCard = ({ campaign }) => {
   const navigate = useNavigate();
 
@@ -457,17 +467,17 @@ const CampaignCard = ({ campaign }) => {
 
   return (
     <Card
-      variant="default"
+      variant="elevated"
       padding="none"
-      className="overflow-hidden cursor-pointer group hover:shadow-xl transition-all"
+      className="overflow-hidden cursor-pointer group hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
       onClick={() => navigate(`/campaign-details/${campaign.id}`)}
     >
       {/* Image */}
-      <div className="relative h-48 overflow-hidden bg-gray-100">
+      <div className="relative h-56 overflow-hidden bg-gray-100">
         <Image
           src={campaign.coverImage}
           alt={campaign.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
         {campaign.verificationStatus === 'verified' && (
           <Badge variant="default" className="absolute top-3 left-3 bg-white/95 text-primary shadow-lg">
@@ -478,11 +488,11 @@ const CampaignCard = ({ campaign }) => {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-6">
         {/* Category & Location */}
-        <div className="flex items-center gap-2 mb-2 text-xs text-gray-500">
+        <div className="flex items-center gap-3 mb-3 text-xs text-gray-500">
           {campaign.category && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
               <Icon name="Tag" size={12} />
               {campaign.category}
             </span>
@@ -496,33 +506,38 @@ const CampaignCard = ({ campaign }) => {
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-heading font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+        <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary transition-colors">
           {campaign.title}
         </h3>
 
         {/* Student Name */}
         {campaign.studentName && (
-          <p className="text-sm text-gray-600 mb-3">by {campaign.studentName}</p>
+          <p className="text-sm text-gray-600 mb-4 flex items-center gap-1">
+            <Icon name="User" size={14} />
+            by {campaign.studentName}
+          </p>
         )}
 
         {/* Progress Bar */}
-        <Progress value={campaign.currentAmount} max={campaign.goalAmount} size="md" className="mb-2" />
+        <Progress value={campaign.currentAmount} max={campaign.goalAmount} size="lg" className="mb-4" />
 
         {/* Stats */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-lg font-bold text-gray-900">
+            <div className="text-2xl font-bold text-gray-900">
               {formatCurrency(campaign.currentAmount)}
             </div>
-            <div className="text-xs text-gray-600">
+            <div className="text-sm text-gray-600">
               of {formatCurrency(campaign.goalAmount)}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-base font-semibold text-primary">
+            <div className="text-2xl font-bold text-primary">
               {Math.round(percentage)}%
             </div>
-            <div className="text-xs text-gray-600">funded</div>
+            <div className="text-xs text-gray-600">
+              funded
+            </div>
           </div>
         </div>
       </div>

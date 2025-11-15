@@ -48,17 +48,44 @@ async function getTrendingCampaigns(req, res, pool) {
   try {
     // Calculate trending score based on recent activity
     // Score = (recent_views * 1) + (recent_donations * 10) + (recent_shares * 5) + (recent_follows * 3)
+    // Build time filters per table alias to avoid ambiguity
+    const viewsFilter =
+      period === 'hour' ? 'AND cv.viewed_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)'
+      : period === 'day' ? 'AND cv.viewed_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)'
+      : period === 'week' ? 'AND cv.viewed_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)'
+      : period === 'month' ? 'AND cv.viewed_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)'
+      : '';
+    const donationsFilter =
+      period === 'hour' ? 'AND d.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)'
+      : period === 'day' ? 'AND d.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)'
+      : period === 'week' ? 'AND d.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)'
+      : period === 'month' ? 'AND d.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)'
+      : '';
+    const sharesFilter =
+      period === 'hour' ? 'AND ss.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)'
+      : period === 'day' ? 'AND ss.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)'
+      : period === 'week' ? 'AND ss.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)'
+      : period === 'month' ? 'AND ss.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)'
+      : '';
+    const followersFilter =
+      period === 'hour' ? 'AND cf.created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)'
+      : period === 'day' ? 'AND cf.created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)'
+      : period === 'week' ? 'AND cf.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)'
+      : period === 'month' ? 'AND cf.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)'
+      : '';
 
-    let timeFilter = '';
-    if (period === 'hour') {
-      timeFilter = 'AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)';
-    } else if (period === 'day') {
-      timeFilter = 'AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)';
-    } else if (period === 'week') {
-      timeFilter = 'AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
-    } else if (period === 'month') {
-      timeFilter = 'AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
-    }
+    // Detect optional tables
+    const [shareTable] = await pool.execute(`SHOW TABLES LIKE 'social_shares'`);
+    const hasSocialShares = shareTable.length > 0;
+    const [followersTable] = await pool.execute(`SHOW TABLES LIKE 'campaign_followers'`);
+    const hasFollowers = followersTable.length > 0;
+
+    const sharesPart = hasSocialShares
+      ? ` + COALESCE((SELECT COUNT(*) FROM social_shares ss WHERE ss.campaign_id = c.id ${sharesFilter}), 0) * 5`
+      : '';
+    const followersPart = hasFollowers
+      ? ` + COALESCE((SELECT COUNT(*) FROM campaign_followers cf WHERE cf.campaign_id = c.id ${followersFilter}), 0) * 3`
+      : '';
 
     const trendingQuery = `
       SELECT
@@ -74,13 +101,13 @@ async function getTrendingCampaigns(req, res, pool) {
         u.full_name as organizer_name,
         u.email as organizer_email,
         (
-          COALESCE((SELECT COUNT(*) FROM campaign_views cv WHERE cv.campaign_id = c.id ${timeFilter.replace('created_at', 'cv.viewed_at')}), 0) * 1 +
-          COALESCE((SELECT COUNT(*) FROM donations d WHERE d.campaign_id = c.id ${timeFilter.replace('created_at', 'd.created_at')}), 0) * 10 +
-          COALESCE((SELECT COUNT(*) FROM social_shares ss WHERE ss.campaign_id = c.id ${timeFilter.replace('created_at', 'ss.created_at')}), 0) * 5 +
-          COALESCE((SELECT COUNT(*) FROM campaign_followers cf WHERE cf.campaign_id = c.id ${timeFilter.replace('created_at', 'cf.created_at')}), 0) * 3
+          COALESCE((SELECT COUNT(*) FROM campaign_views cv WHERE cv.campaign_id = c.id ${viewsFilter}), 0) * 1 +
+          COALESCE((SELECT COUNT(*) FROM donations d WHERE d.campaign_id = c.id ${donationsFilter}), 0) * 10
+          ${sharesPart}
+          ${followersPart}
         ) as trending_score,
         COALESCE((SELECT COUNT(*) FROM donations WHERE campaign_id = c.id), 0) as total_donors,
-        COALESCE((SELECT COUNT(*) FROM campaign_views cv WHERE cv.campaign_id = c.id ${timeFilter.replace('created_at', 'cv.viewed_at')}), 0) as recent_views
+        COALESCE((SELECT COUNT(*) FROM campaign_views cv WHERE cv.campaign_id = c.id ${viewsFilter}), 0) as recent_views
       FROM campaigns c
       LEFT JOIN users u ON c.user_id = u.id
       WHERE c.status IN ('active', 'published')
@@ -138,28 +165,44 @@ async function getCampaignAnalytics(req, res, pool) {
       ORDER BY date ASC
     `, [campaignId, days]);
 
-    // Get share statistics
-    const [shareStats] = await pool.execute(`
-      SELECT
-        platform,
-        COUNT(*) as count
-      FROM social_shares
-      WHERE campaign_id = ?
-        AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
-      GROUP BY platform
-    `, [campaignId, days]);
+    // Get share statistics (optional table)
+    const [shareTable] = await pool.execute(`SHOW TABLES LIKE 'social_shares'`);
+    const hasSocialShares = shareTable.length > 0;
+    let shareStats = [];
+    if (hasSocialShares) {
+      const [ss] = await pool.execute(`
+        SELECT
+          platform,
+          COUNT(*) as count
+        FROM social_shares
+        WHERE campaign_id = ?
+          AND created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+        GROUP BY platform
+      `, [campaignId, days]);
+      shareStats = ss;
+    }
 
     // Get overall metrics
-    const [overallMetrics] = await pool.execute(`
+    let overallMetricsQuery = `
       SELECT
         (SELECT COUNT(*) FROM campaign_views WHERE campaign_id = ?) as total_views,
         (SELECT COUNT(DISTINCT COALESCE(user_id, ip_address)) FROM campaign_views WHERE campaign_id = ?) as unique_visitors,
         (SELECT COUNT(*) FROM donations WHERE campaign_id = ?) as total_donations,
         (SELECT COALESCE(SUM(amount), 0) FROM donations WHERE campaign_id = ?) as total_raised,
-        (SELECT COUNT(*) FROM social_shares WHERE campaign_id = ?) as total_shares,
+        $$TOTAL_SHARES_PLACEHOLDER$$,
         (SELECT COUNT(*) FROM campaign_followers WHERE campaign_id = ?) as total_followers,
         (SELECT COUNT(*) FROM campaign_comments WHERE campaign_id = ?) as total_comments
-    `, [campaignId, campaignId, campaignId, campaignId, campaignId, campaignId, campaignId]);
+    `;
+    overallMetricsQuery = overallMetricsQuery.replace(
+      '$$TOTAL_SHARES_PLACEHOLDER$$',
+      hasSocialShares ? `(SELECT COUNT(*) FROM social_shares WHERE campaign_id = ? ) as total_shares` : `0 as total_shares`
+    );
+
+    const metricsParams = hasSocialShares
+      ? [campaignId, campaignId, campaignId, campaignId, campaignId, campaignId]
+      : [campaignId, campaignId, campaignId, campaignId, campaignId];
+
+    const [overallMetrics] = await pool.execute(overallMetricsQuery, metricsParams);
 
     // Calculate conversion rate
     const conversionRate = overallMetrics[0].unique_visitors > 0
@@ -306,7 +349,7 @@ async function getActivityFeed(req, res, pool) {
         d.id,
         d.donor_name,
         d.amount,
-        d.message,
+        d.donor_message,
         d.created_at,
         c.id as campaign_id,
         c.title as campaign_title

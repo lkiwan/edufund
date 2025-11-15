@@ -9,7 +9,7 @@ require('dotenv').config();
 const pool = require('./src/db/init-db');
 
 // Initialize upload service
-const { uploadSingle, uploadMultiple, processImage } = require('./upload-service');
+const { uploadSingle, uploadAvatar, uploadMultiple, processImage } = require('./upload-service');
 
 // Initialize profile routes
 const profileRoutes = require('./routes/profileRoutes')(pool);
@@ -182,6 +182,44 @@ app.post('/api/upload/campaign-images', uploadMultiple, async (req, res) => {
   } catch (err) {
     console.error('Upload error:', err);
     res.status(500).json({ error: 'Failed to upload images' });
+  }
+});
+
+// Upload avatar
+app.post('/api/upload/avatar', uploadAvatar, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    // Process the avatar image (resize to square)
+    const processed = await processImage(req.file.path, {
+      width: 400,
+      height: 400,
+      quality: 90,
+      createThumbnail: false
+    });
+
+    const filename = path.basename(processed.path);
+    const avatarUrl = `/uploads/campaigns/${filename}`;
+
+    // Update user's avatar in database if userId provided
+    if (req.body.userId) {
+      await query(
+        'UPDATE users SET avatar = ? WHERE id = ?',
+        [avatarUrl, req.body.userId]
+      );
+    }
+
+    res.json({
+      success: true,
+      url: avatarUrl,
+      avatarUrl: avatarUrl, // For backwards compatibility
+      filename: filename
+    });
+  } catch (err) {
+    console.error('Avatar upload error:', err);
+    res.status(500).json({ success: false, error: 'Failed to upload avatar' });
   }
 });
 

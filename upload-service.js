@@ -145,5 +145,6 @@ module.exports = {
   getImageUrls,
   // Middleware exports
   uploadSingle: upload.single('image'),
+  uploadAvatar: upload.single('avatar'),
   uploadMultiple: upload.array('images', 10),
 };

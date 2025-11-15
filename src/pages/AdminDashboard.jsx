@@ -215,24 +215,32 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <Navigation />
 
       <div className="pt-20 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-heading font-bold text-gray-900">
-                  Administration EduFund
+          {/* Header - Modern Style */}
+          <div className="mb-10">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="text-center md:text-left">
+                <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-3">
+                  Admin
+                  <span className="block mt-1 bg-gradient-to-r from-primary to-teal-600 bg-clip-text text-transparent">
+                    Dashboard
+                  </span>
                 </h1>
-                <p className="text-gray-600 mt-2">
-                  Gestion des campagnes, validations et rapports
+                <p className="text-xl text-gray-600">
+                  Campaign management, validations and reports
                 </p>
               </div>
-              <Button onClick={generateMonthlyReport} iconName="Download">
-                Rapport mensuel
+              <Button
+                onClick={generateMonthlyReport}
+                iconName="Download"
+                size="lg"
+                className="rounded-full"
+              >
+                Monthly Report
               </Button>
             </div>
 
@@ -307,6 +315,30 @@ const AdminDashboard = () => {
                     <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                       <Icon name="Banknote" size={24} className="text-purple-600" />
                     </div>
+                  </div>
+                </Card>
+              </div>
+
+              {/* Activity Monitor Access - Prominent CTA */}
+              <div className="mb-8">
+                <Card variant="elevated" className="bg-gradient-to-br from-primary via-emerald-600 to-teal-600 border-2 border-white shadow-2xl">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                        <Icon name="Activity" size={32} color="white" />
+                      </div>
+                      <div className="text-white">
+                        <h3 className="text-2xl font-extrabold mb-1">Real-Time Activity Monitor</h3>
+                        <p className="text-white/90 text-sm">View all platform activities, events, and user actions in real-time</p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => navigate('/activity-monitor')}
+                      className="bg-white text-primary hover:bg-gray-100 font-bold shadow-lg rounded-full px-8 py-4"
+                      iconName="ExternalLink"
+                    >
+                      Open Activity Monitor
+                    </Button>
                   </div>
                 </Card>
               </div>

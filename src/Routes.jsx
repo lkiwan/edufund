@@ -15,6 +15,10 @@ import AdminDashboard from "./pages/AdminDashboard";
 import PersonalAnalytics from "./pages/PersonalAnalytics";
 import PlatformStats from "./pages/PlatformStats";
 import About from "./pages/About";
+import ActivityMonitor from "./pages/ActivityMonitor";
+import ProfileSettings from "./pages/ProfileSettings";
+import AccountSettings from "./pages/AccountSettings";
+import SavedCampaigns from "./pages/SavedCampaigns";
 
 const Routes = () => {
   return (
@@ -37,8 +41,12 @@ const Routes = () => {
           <Route path="/student-dashboard" element={<StudentDashboard />} />
           <Route path="/donor-dashboard" element={<DonorDashboard />} />
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/activity-monitor" element={<ActivityMonitor />} />
           <Route path="/create-campaign" element={<CreateCampaign />} />
           <Route path="/personal-analytics" element={<PersonalAnalytics />} />
+          <Route path="/profile-settings" element={<ProfileSettings />} />
+          <Route path="/account-settings" element={<AccountSettings />} />
+          <Route path="/saved-campaigns" element={<SavedCampaigns />} />
 
           {/* Catch all */}
           <Route path="*" element={<NotFound />} />

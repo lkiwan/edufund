@@ -531,15 +531,20 @@ const DonorDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
       <Navigation />
 
-      <div className="pt-16">
+      <div className="pt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-heading font-bold text-gray-900 mb-2">Donor Dashboard</h1>
-            <p className="text-gray-600">Track your impact and manage your donations</p>
+          {/* Page Header - Modern Style */}
+          <div className="mb-10 text-center">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-3">
+              Donor
+              <span className="block mt-1 bg-gradient-to-r from-primary to-teal-600 bg-clip-text text-transparent">
+                Dashboard
+              </span>
+            </h1>
+            <p className="text-xl text-gray-600">Track your impact and manage your donations</p>
           </div>
 
           {/* Tabs Navigation */}

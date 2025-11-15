@@ -135,28 +135,37 @@ const Navigation = () => {
             >
               Discover
             </button>
-            <button
-              onClick={() => navigate('/global-dashboard')}
-              className={`font-medium transition-colors ${
-                location.pathname === '/global-dashboard'
-                  ? 'text-primary'
-                  : 'text-foreground hover:text-primary'
-              }`}
-            >
-              Analytics
-            </button>
-            <button
-              onClick={() => navigate('/how-it-works')}
-              className="font-medium text-foreground hover:text-primary transition-colors"
-            >
-              How It Works
-            </button>
-            <button
-              onClick={() => navigate('/about')}
-              className="font-medium text-foreground hover:text-primary transition-colors"
-            >
-              About
-            </button>
+            {/* Analytics - Admin Only */}
+            {(userRole === 'admin' || userRole === 'super-admin') && (
+              <button
+                onClick={() => navigate('/global-dashboard')}
+                className={`font-medium transition-colors ${
+                  location.pathname === '/global-dashboard'
+                    ? 'text-primary'
+                    : 'text-foreground hover:text-primary'
+                }`}
+              >
+                Analytics
+              </button>
+            )}
+            {/* How It Works - Hidden for Admins */}
+            {userRole !== 'admin' && userRole !== 'super-admin' && (
+              <button
+                onClick={() => navigate('/how-it-works')}
+                className="font-medium text-foreground hover:text-primary transition-colors"
+              >
+                How It Works
+              </button>
+            )}
+            {/* About - Hidden for Admins */}
+            {userRole !== 'admin' && userRole !== 'super-admin' && (
+              <button
+                onClick={() => navigate('/about')}
+                className="font-medium text-foreground hover:text-primary transition-colors"
+              >
+                About
+              </button>
+            )}
           </div>
 
           {/* Desktop Actions */}
@@ -357,33 +366,42 @@ const Navigation = () => {
             >
               Discover
             </button>
-            <button
-              onClick={() => {
-                navigate('/global-dashboard');
-                setIsMobileMenuOpen(false);
-              }}
-              className="block w-full text-left px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
-            >
-              Analytics
-            </button>
-            <button
-              onClick={() => {
-                navigate('/how-it-works');
-                setIsMobileMenuOpen(false);
-              }}
-              className="block w-full text-left px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
-            >
-              How It Works
-            </button>
-            <button
-              onClick={() => {
-                navigate('/about');
-                setIsMobileMenuOpen(false);
-              }}
-              className="block w-full text-left px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
-            >
-              About
-            </button>
+            {/* Analytics - Admin Only */}
+            {(userRole === 'admin' || userRole === 'super-admin') && (
+              <button
+                onClick={() => {
+                  navigate('/global-dashboard');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
+              >
+                Analytics
+              </button>
+            )}
+            {/* How It Works - Hidden for Admins */}
+            {userRole !== 'admin' && userRole !== 'super-admin' && (
+              <button
+                onClick={() => {
+                  navigate('/how-it-works');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
+              >
+                How It Works
+              </button>
+            )}
+            {/* About - Hidden for Admins */}
+            {userRole !== 'admin' && userRole !== 'super-admin' && (
+              <button
+                onClick={() => {
+                  navigate('/about');
+                  setIsMobileMenuOpen(false);
+                }}
+                className="block w-full text-left px-4 py-2 text-foreground hover:bg-muted rounded-lg transition-colors"
+              >
+                About
+              </button>
+            )}
 
             <div className="pt-3 border-t border-border">
               {isAuthenticated ? (

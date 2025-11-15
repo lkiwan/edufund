@@ -847,3 +847,241 @@ app.get('/api/admin/dashboard-stats', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// ===== ACTIVITY MONITOR =====
+
+// Get all platform activities
+app.get('/api/admin/activities', async (req, res) => {
+  try {
+    const { timeRange = 'today' } = req.query;
+    const activities = [];
+
+    // Calculate time filter
+    let timeFilter = '';
+    switch (timeRange) {
+      case 'today':
+        timeFilter = 'DATE(created_at) = CURDATE()';
+        break;
+      case 'week':
+        timeFilter = 'created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+        break;
+      case 'month':
+        timeFilter = 'created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+        break;
+      default:
+        timeFilter = '1=1'; // all time
+    }
+
+    // 1. Recent Donations
+    const donations = await query(`
+      SELECT
+        d.id,
+        d.amount,
+        d.donor_email,
+        d.donor_name,
+        d.created_at,
+        c.title as campaign_title,
+        c.id as campaign_id
+      FROM donations d
+      LEFT JOIN campaigns c ON d.campaign_id = c.id
+      WHERE ${timeFilter}
+      ORDER BY d.created_at DESC
+      LIMIT 50
+    `);
+
+    donations.forEach(d => {
+      activities.push({
+        type: 'donation',
+        action: 'New Donation',
+        description: `${d.donor_name || d.donor_email} donated to "${d.campaign_title}"`,
+        details: `Amount: ${d.amount} MAD`,
+        user: d.donor_name || d.donor_email,
+        timestamp: d.created_at,
+        amount: d.amount,
+        campaignId: d.campaign_id
+      });
+    });
+
+    // 2. New Campaigns
+    const campaigns = await query(`
+      SELECT
+        id,
+        title,
+        student_name,
+        status,
+        created_at,
+        verification_status
+      FROM campaigns
+      WHERE ${timeFilter}
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+
+    campaigns.forEach(c => {
+      activities.push({
+        type: 'campaign',
+        action: c.status === 'pending' ? 'Campaign Submitted' : 'Campaign Created',
+        description: `${c.student_name} created "${c.title}"`,
+        details: `Status: ${c.status}`,
+        user: c.student_name,
+        timestamp: c.created_at,
+        campaignId: c.id
+      });
+    });
+
+    // 3. Campaign Approvals/Rejections (from audit log)
+    const approvals = await query(`
+      SELECT
+        admin_email,
+        action_type,
+        entity_id,
+        details,
+        created_at,
+        new_value
+      FROM audit_log
+      WHERE entity_type = 'campaign'
+        AND action_type IN ('approve', 'reject')
+        AND ${timeFilter.replace('created_at', 'audit_log.created_at')}
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+
+    for (const a of approvals) {
+      const [campaign] = await query('SELECT title FROM campaigns WHERE id = ?', [a.entity_id]);
+      activities.push({
+        type: a.action_type === 'approve' ? 'approval' : 'rejection',
+        action: a.action_type === 'approve' ? 'Campaign Approved' : 'Campaign Rejected',
+        description: `Admin ${a.action_type}d campaign "${campaign?.title || 'Unknown'}"`,
+        details: a.details || '',
+        user: a.admin_email,
+        timestamp: a.created_at,
+        campaignId: a.entity_id
+      });
+    }
+
+    // 4. New User Registrations
+    const users = await query(`
+      SELECT
+        id,
+        email,
+        role,
+        created_at
+      FROM users
+      WHERE ${timeFilter}
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+
+    users.forEach(u => {
+      activities.push({
+        type: 'user',
+        action: 'New User Registration',
+        description: `New ${u.role} registered`,
+        details: u.email,
+        user: u.email,
+        timestamp: u.created_at
+      });
+    });
+
+    // 5. Campaign Updates
+    const updates = await query(`
+      SELECT
+        cu.id,
+        cu.title,
+        cu.content,
+        cu.created_at,
+        c.title as campaign_title,
+        c.student_name,
+        c.id as campaign_id
+      FROM campaign_updates cu
+      LEFT JOIN campaigns c ON cu.campaign_id = c.id
+      WHERE ${timeFilter.replace('created_at', 'cu.created_at')}
+      ORDER BY cu.created_at DESC
+      LIMIT 30
+    `);
+
+    updates.forEach(u => {
+      activities.push({
+        type: 'update',
+        action: 'Campaign Update Posted',
+        description: `${u.student_name} posted update for "${u.campaign_title}"`,
+        details: u.title || 'Update posted',
+        user: u.student_name,
+        timestamp: u.created_at,
+        campaignId: u.campaign_id
+      });
+    });
+
+    // 6. Comments
+    const comments = await query(`
+      SELECT
+        cc.id,
+        cc.message,
+        cc.created_at,
+        cc.commenter_name,
+        c.title as campaign_title,
+        c.id as campaign_id
+      FROM campaign_comments cc
+      LEFT JOIN campaigns c ON cc.campaign_id = c.id
+      WHERE ${timeFilter.replace('created_at', 'cc.created_at')}
+      ORDER BY cc.created_at DESC
+      LIMIT 30
+    `);
+
+    comments.forEach(c => {
+      activities.push({
+        type: 'comment',
+        action: 'New Comment',
+        description: `${c.commenter_name} commented on "${c.campaign_title}"`,
+        details: c.message.substring(0, 100) + (c.message.length > 100 ? '...' : ''),
+        user: c.commenter_name,
+        timestamp: c.created_at,
+        campaignId: c.campaign_id
+      });
+    });
+
+    // 7. Profile Verifications
+    const verifications = await query(`
+      SELECT
+        admin_email,
+        action_type,
+        entity_id,
+        details,
+        created_at
+      FROM audit_log
+      WHERE entity_type = 'profile'
+        AND action_type IN ('verify', 'reject_verification')
+        AND ${timeFilter.replace('created_at', 'audit_log.created_at')}
+      ORDER BY created_at DESC
+      LIMIT 30
+    `);
+
+    verifications.forEach(v => {
+      activities.push({
+        type: 'verification',
+        action: v.action_type === 'verify' ? 'Profile Verified' : 'Verification Rejected',
+        description: `Admin ${v.action_type === 'verify' ? 'verified' : 'rejected'} profile verification`,
+        details: v.details || '',
+        user: v.admin_email,
+        timestamp: v.created_at
+      });
+    });
+
+    // Sort all activities by timestamp (most recent first)
+    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    res.json({
+      success: true,
+      activities: activities,
+      count: activities.length,
+      timeRange
+    });
+  } catch (err) {
+    console.error('Error fetching activities:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch activities',
+      activities: []
+    });
+  }
+});

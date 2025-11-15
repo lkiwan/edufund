@@ -7,7 +7,58 @@ module.exports = (pool) => {
 
   // ==================== PROFILE SETTINGS ENDPOINTS ====================
 
-  // Get user profile
+  // Get user profile (NEW - matches ProfileSettings.jsx)
+  router.get('/profile/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      const users = await query(
+        `SELECT id, email, first_name, last_name, phone, bio, avatar, university, field, year,
+                city, country, facebook, twitter, linkedin, instagram, website, role, created_at
+         FROM users WHERE id = ?`,
+        [userId]
+      );
+
+      if (!users || users.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      res.json({ success: true, profile: users[0] });
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch profile' });
+    }
+  });
+
+  // Update user profile (NEW - matches ProfileSettings.jsx)
+  router.put('/profile/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const {
+        first_name, last_name, phone, bio, avatar,
+        university, field, year, city, country,
+        facebook, twitter, linkedin, instagram, website
+      } = req.body;
+
+      await query(
+        `UPDATE users
+         SET first_name = ?, last_name = ?, phone = ?, bio = ?, avatar = ?,
+             university = ?, field = ?, year = ?, city = ?, country = ?,
+             facebook = ?, twitter = ?, linkedin = ?, instagram = ?, website = ?
+         WHERE id = ?`,
+        [first_name, last_name, phone, bio, avatar,
+         university, field, year, city, country,
+         facebook, twitter, linkedin, instagram, website, userId]
+      );
+
+      res.json({ success: true, message: 'Profile updated successfully' });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      res.status(500).json({ success: false, error: 'Failed to update profile' });
+    }
+  });
+
+  // Get user profile (OLD - keeping for backwards compatibility)
   router.get('/users/:userId/profile', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -28,7 +79,7 @@ module.exports = (pool) => {
     }
   });
 
-  // Update user profile
+  // Update user profile (OLD - keeping for backwards compatibility)
   router.put('/users/:userId/profile', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -50,7 +101,147 @@ module.exports = (pool) => {
 
   // ==================== ACCOUNT SETTINGS ENDPOINTS ====================
 
-  // Get user account settings
+  // Get account settings (NEW - matches AccountSettings.jsx)
+  router.get('/account/settings/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      const users = await query(
+        'SELECT id, email, role, created_at FROM users WHERE id = ?',
+        [userId]
+      );
+
+      if (!users || users.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      // Get settings from user_settings table
+      let settings = await query(
+        'SELECT * FROM user_settings WHERE user_id = ?',
+        [userId]
+      );
+
+      // Create default settings if none exist
+      if (!settings || settings.length === 0) {
+        await query(
+          'INSERT INTO user_settings (user_id) VALUES (?)',
+          [userId]
+        );
+        settings = await query(
+          'SELECT * FROM user_settings WHERE user_id = ?',
+          [userId]
+        );
+      }
+
+      res.json({
+        success: true,
+        account: users[0],
+        settings: settings[0]
+      });
+    } catch (error) {
+      console.error('Error fetching account settings:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch account settings' });
+    }
+  });
+
+  // Update account settings (NEW - matches AccountSettings.jsx)
+  router.put('/account/settings/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const {
+        email_notifications,
+        campaign_updates,
+        donation_receipts,
+        monthly_reports,
+        marketing_emails,
+        two_factor_enabled,
+        public_profile,
+        show_donations
+      } = req.body;
+
+      await query(
+        `UPDATE user_settings
+         SET email_notifications = ?, campaign_updates = ?, donation_receipts = ?,
+             monthly_reports = ?, marketing_emails = ?, two_factor_enabled = ?,
+             public_profile = ?, show_donations = ?
+         WHERE user_id = ?`,
+        [email_notifications, campaign_updates, donation_receipts,
+         monthly_reports, marketing_emails, two_factor_enabled,
+         public_profile, show_donations, userId]
+      );
+
+      res.json({ success: true, message: 'Settings updated successfully' });
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      res.status(500).json({ success: false, error: 'Failed to update settings' });
+    }
+  });
+
+  // Change password (NEW - matches AccountSettings.jsx)
+  router.post('/account/change-password', async (req, res) => {
+    try {
+      const { userId, currentPassword, newPassword } = req.body;
+
+      // Get current password
+      const users = await query('SELECT password FROM users WHERE id = ?', [userId]);
+      if (!users || users.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      // Verify current password
+      const isValidPassword = await bcrypt.compare(currentPassword, users[0].password);
+      if (!isValidPassword) {
+        return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+      }
+
+      // Hash new password
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(newPassword, salt);
+
+      // Update password
+      await query('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, userId]);
+
+      // Log activity
+      await query(
+        'INSERT INTO user_activity_log (user_id, activity_type, activity_description) VALUES (?, ?, ?)',
+        [userId, 'PASSWORD_CHANGE', 'Password changed successfully']
+      );
+
+      res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+      console.error('Error changing password:', error);
+      res.status(500).json({ success: false, error: 'Failed to change password' });
+    }
+  });
+
+  // Delete account (NEW - matches AccountSettings.jsx)
+  router.delete('/account/delete/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { password } = req.body;
+
+      // Verify password before deletion
+      const users = await query('SELECT password FROM users WHERE id = ?', [userId]);
+      if (!users || users.length === 0) {
+        return res.status(404).json({ success: false, error: 'User not found' });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, users[0].password);
+      if (!isValidPassword) {
+        return res.status(401).json({ success: false, error: 'Invalid password' });
+      }
+
+      // Delete user (cascading deletes will handle related records)
+      await query('DELETE FROM users WHERE id = ?', [userId]);
+
+      res.json({ success: true, message: 'Account deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      res.status(500).json({ success: false, error: 'Failed to delete account' });
+    }
+  });
+
+  // Get user account settings (OLD - keeping for backwards compatibility)
   router.get('/users/:userId/account', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -193,9 +384,79 @@ module.exports = (pool) => {
     }
   });
 
-  // ==================== SAVED CAMPAIGNS ENDPOINTS ====================
+  // ==================== SAVED CAMPAIGNS / FAVORITES ENDPOINTS ====================
 
-  // Get saved campaigns
+  // Get favorites (NEW - matches SavedCampaigns.jsx)
+  router.get('/favorites/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      const favorites = await query(
+        `SELECT c.*, f.created_at as favorited_at
+         FROM campaigns c
+         INNER JOIN favorites f ON c.id = f.campaign_id
+         WHERE f.user_id = ?
+         ORDER BY f.created_at DESC`,
+        [userId]
+      );
+
+      res.json({ success: true, favorites });
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch favorites' });
+    }
+  });
+
+  // Toggle favorite (NEW - matches SavedCampaigns.jsx)
+  router.post('/favorites/toggle', async (req, res) => {
+    try {
+      const { userId, campaignId } = req.body;
+
+      // Check if favorite exists
+      const existing = await query(
+        'SELECT id FROM favorites WHERE user_id = ? AND campaign_id = ?',
+        [userId, campaignId]
+      );
+
+      if (existing && existing.length > 0) {
+        // Remove favorite
+        await query(
+          'DELETE FROM favorites WHERE user_id = ? AND campaign_id = ?',
+          [userId, campaignId]
+        );
+        res.json({ success: true, isFavorited: false, message: 'Removed from favorites' });
+      } else {
+        // Add favorite
+        await query(
+          'INSERT INTO favorites (user_id, campaign_id) VALUES (?, ?)',
+          [userId, campaignId]
+        );
+        res.json({ success: true, isFavorited: true, message: 'Added to favorites' });
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      res.status(500).json({ success: false, error: 'Failed to toggle favorite' });
+    }
+  });
+
+  // Check if campaign is favorited
+  router.get('/favorites/check/:userId/:campaignId', async (req, res) => {
+    try {
+      const { userId, campaignId } = req.params;
+
+      const favorite = await query(
+        'SELECT id FROM favorites WHERE user_id = ? AND campaign_id = ?',
+        [userId, campaignId]
+      );
+
+      res.json({ success: true, isFavorited: favorite && favorite.length > 0 });
+    } catch (error) {
+      console.error('Error checking favorite:', error);
+      res.status(500).json({ success: false, error: 'Failed to check favorite status' });
+    }
+  });
+
+  // Get saved campaigns (OLD - keeping for backwards compatibility)
   router.get('/users/:userId/saved-campaigns', async (req, res) => {
     try {
       const { userId } = req.params;
