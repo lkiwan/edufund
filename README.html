@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>README - EduFund Platform</title>
+  <style>
+    @page {
+      margin: 2cm;
+      size: A4;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+    }
+
+    h1 {
+      color: #10b981;
+      border-bottom: 3px solid #10b981;
+      padding-bottom: 10px;
+      margin-top: 30px;
+      page-break-before: always;
+    }
+
+    h1:first-of-type {
+      page-break-before: auto;
+    }
+
+    h2 {
+      color: #059669;
+      border-bottom: 2px solid #d1fae5;
+      padding-bottom: 8px;
+      margin-top: 25px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      color: #047857;
+      margin-top: 20px;
+      page-break-after: avoid;
+    }
+
+    pre {
+      background: #f3f4f6;
+      border-left: 4px solid #10b981;
+      padding: 15px;
+      overflow-x: auto;
+      border-radius: 5px;
+      page-break-inside: avoid;
+    }
+
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 20px 0;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #10b981;
+      color: white;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    ul, ol {
+      margin: 15px 0;
+      padding-left: 30px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+
+    a {
+      color: #10b981;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    hr {
+      border: none;
+      border-top: 2px solid #e5e7eb;
+      margin: 30px 0;
+    }
+
+    strong {
+      color: #1f2937;
+      font-weight: 600;
+    }
+
+    blockquote {
+      border-left: 4px solid #10b981;
+      padding-left: 20px;
+      margin: 20px 0;
+      color: #6b7280;
+      font-style: italic;
+      background: #f9fafb;
+      padding: 15px 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      page-break-after: avoid;
+    }
+
+    .header h1 {
+      border: none;
+      margin: 0;
+      font-size: 2.5em;
+    }
+
+    .header p {
+      color: #6b7280;
+      font-size: 1.1em;
+      margin: 10px 0;
+    }
+
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.9em;
+      page-break-before: avoid;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+
+    @media print {
+      body {
+        max-width: 100%;
+      }
+
+      a {
+        color: #333;
+        text-decoration: none;
+      }
+
+      a[href]:after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+        color: #666;
+      }
+
+      h1, h2, h3 {
+        page-break-after: avoid;
+      }
+
+      pre, table, img {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>EduFund Platform</h1>
+    <p>README</p>
+    <p>Generated: 15/11/2025 03:19:28</p>
+  </div>
+
+  <h1>EduFund - Educational Crowdfunding Platform</h1></p><p>A comprehensive full-stack crowdfunding platform designed specifically for educational fundraising. Students can create campaigns for their educational needs while donors can discover and support meaningful educational causes.</p><p><h2>Features</h2></p><p><h3>For Students</h3>
+<li><strong>Campaign Creation & Management</strong>: Create detailed fundraising campaigns with images, goals, and descriptions</li>
+<li><strong>Campaign Review Workflow</strong>: Automatic review process for campaign approval</li>
+<li><strong>Real-time Analytics</strong>: Track donations, views, shares, and campaign performance</li>
+<li><strong>Profile Management</strong>: Manage student profiles with verification workflow</li>
+<li><strong>Campaign Updates</strong>: Post updates and milestones to keep donors informed</li>
+<li><strong>Milestone Celebrations</strong>: Automatic celebrations when reaching funding milestones</li></p><p><h3>For Donors</h3>
+<li><strong>Campaign Discovery</strong>: Browse campaigns with advanced filters (category, location, university)</li>
+<li><strong>Featured Campaigns</strong>: Highlighted campaigns on the homepage carousel</li>
+<li><strong>Donation Tracking</strong>: Complete donation history and receipt generation</li>
+<li><strong>Donor Wall</strong>: Recognition wall showing top donors and recent contributions</li>
+<li><strong>Favorites System</strong>: Bookmark and track favorite campaigns</li>
+<li><strong>Social Sharing</strong>: Share campaigns on social media platforms</li>
+<li><strong>Comments</strong>: Engage with students through campaign comments</li></p><p><h3>For Administrators</h3>
+<li><strong>Campaign Review</strong>: Approve or reject submitted campaigns</li>
+<li><strong>Profile Verification</strong>: Verify student profiles and documentation</li>
+<li><strong>Platform Analytics</strong>: Comprehensive dashboard with platform-wide metrics</li>
+<li><strong>User Management</strong>: Manage users across all roles</li>
+<li><strong>Content Moderation</strong>: Monitor and moderate platform content</li></p><p><h3>Platform Features</h3>
+<li><strong>Multi-role Authentication</strong>: Student, Donor, and Admin roles</li>
+<li><strong>Secure Payment Processing</strong>: Donation tracking and management</li>
+<li><strong>Email Notifications</strong>: Automated email system for key events</li>
+<li><strong>Image Upload</strong>: Campaign image management with thumbnails</li>
+<li><strong>Responsive Design</strong>: Mobile-friendly interface with TailwindCSS</li>
+<li><strong>Real-time Updates</strong>: Live campaign statistics and notifications</li></p><p><h2>Tech Stack</h2></p><p><h3>Frontend</h3>
+<li><strong>React 18</strong> - Modern UI library</li>
+<li><strong>Vite</strong> - Fast build tool and dev server</li>
+<li><strong>React Router</strong> - Client-side routing</li>
+<li><strong>TailwindCSS</strong> - Utility-first CSS framework</li>
+<li><strong>Framer Motion</strong> - Animation library</li>
+<li><strong>Lucide React</strong> - Icon library</li></p><p><h3>Backend</h3>
+<li><strong>Node.js & Express</strong> - Server framework</li>
+<li><strong>MySQL</strong> - Relational database</li>
+<li><strong>JWT</strong> - Authentication tokens</li>
+<li><strong>Bcrypt</strong> - Password hashing</li>
+<li><strong>Multer</strong> - File upload handling</li>
+<li><strong>Sharp</strong> - Image processing</li>
+<li><strong>Nodemailer</strong> - Email service</li></p><p><h3>Development Tools</h3>
+<li><strong>ESLint</strong> - Code linting</li>
+<li><strong>PostCSS</strong> - CSS processing</li>
+<li><strong>CORS</strong> - Cross-origin resource sharing</li></p><p><h2>Getting Started</h2></p><p><h3>Prerequisites</h3>
+<li><strong>Node.js</strong> 18+ and npm</li>
+<li><strong>MySQL</strong> 8.0+ or XAMPP/MAMP</li>
+<li><strong>Git</strong> for version control</li></p><p><h3>Installation</h3></p><p><li><strong>Clone the repository</strong></li>
+<pre><code class="language-bash">git clone https://github.com/lkiwan/edufund.git
+<p>cd edufund</p>
+</code></pre></p><p><li><strong>Install dependencies</strong></li>
+<pre><code class="language-bash">npm install
+</code></pre></p><p><li><strong>Configure environment variables</strong></li></p><p>Create a <code>.env</code> file in the root directory based on <code>.env.example</code>:</p><p><pre><code class="language-env"><h1>Database Configuration</h1>
+<p>DB_HOST=10.255.255.254</p>
+<p>DB_USER=root</p>
+<p>DB_PASSWORD=your_mysql_password</p>
+<p>DB_NAME=edufund</p>
+<p>DB_PORT=3306</p><p><h1>Server Configuration</h1></p>
+<p>PORT=5000</p>
+<p>NODE_ENV=development</p><p><h1>JWT Configuration</h1></p>
+<p>JWT_SECRET=your_jwt_secret_key_here</p><p><h1>Email Configuration (Optional)</h1></p>
+<p>SMTP_HOST=smtp.gmail.com</p>
+<p>SMTP_PORT=587</p>
+<p>SMTP_USER=your_email@gmail.com</p>
+<p>SMTP_PASS=your_app_password</p><p><h1>API Keys (Optional)</h1></p>
+<p>OPENAI_API_KEY=your_openai_key</p>
+<p>ANTHROPIC_API_KEY=your_anthropic_key</p>
+</code></pre></p><p><li><strong>Set up the database</strong></li></p><p>Start your MySQL server (XAMPP/MAMP or standalone), then initialize the database:</p><p><pre><code class="language-bash">node create-database.js
+<p>node initialize-tables.js</p>
+</code></pre></p><p><li><strong>Seed sample data (optional)</strong></li>
+<pre><code class="language-bash">node seed-sample-data.js
+<p>node add-test-user.js</p>
+</code></pre></p><p><h3>Running the Application</h3></p><p><strong>Development Mode:</strong></p><p>Start the backend server:
+<pre><code class="language-bash">npm start
+<h1>or</h1>
+<p>node server.js</p>
+</code></pre>
+<p>Server runs on <code>http://localhost:5000</code></p><p>Start the frontend dev server (in a new terminal):</p>
+<pre><code class="language-bash">npm run dev
+</code></pre>
+<p>Frontend runs on <code>http://localhost:5173</code></p><p><strong>Production Build:</strong></p>
+<pre><code class="language-bash">npm run build
+<p>npm run serve</p>
+</code></pre></p><p><h2>Project Structure</h2></p><p><pre><code class="language-">edufund/
+<p>├── src/</p>
+<p>│   ├── components/          # React components</p>
+<p>│   │   ├── layout/         # Navigation, Footer</p>
+<p>│   │   ├── ui/             # Reusable UI components</p>
+<p>│   │   ├── DonationModal.jsx</p>
+<p>│   │   ├── DonorWall.jsx</p>
+<p>│   │   ├── FavoriteButton.jsx</p>
+<p>│   │   ├── MilestoneCelebration.jsx</p>
+<p>│   │   └── ShareButtons.jsx</p>
+<p>│   ├── pages/              # Page components</p>
+<p>│   │   ├── Home.jsx</p>
+<p>│   │   ├── Discover.jsx</p>
+<p>│   │   ├── CampaignDetails.jsx</p>
+<p>│   │   ├── CreateCampaign.jsx</p>
+<p>│   │   ├── StudentDashboard.jsx</p>
+<p>│   │   ├── DonorDashboard.jsx</p>
+<p>│   │   ├── AdminDashboard.jsx</p>
+<p>│   │   └── Login.jsx</p>
+<p>│   ├── services/           # API services</p>
+<p>│   │   └── api.js</p>
+<p>│   ├── utils/              # Utility functions</p>
+<p>│   │   ├── currency.js</p>
+<p>│   │   └── toast.js</p>
+<p>│   ├── data/               # Static data</p>
+<p>│   │   ├── moroccoLocations.js</p>
+<p>│   │   └── moroccoUniversities.js</p>
+<p>│   ├── styles/             # CSS files</p>
+<p>│   │   └── index.css</p>
+<p>│   ├── App.jsx</p>
+<p>│   ├── Routes.jsx</p>
+<p>│   └── index.jsx</p>
+<p>├── routes/                 # Express routes</p>
+<p>│   └── profileRoutes.js</p>
+<p>├── public/                 # Static assets</p>
+<p>│   └── assets/</p>
+<p>├── uploads/                # User uploaded files</p>
+<p>│   └── campaigns/</p>
+<p>├── scripts/                # Database scripts</p>
+<p>│   ├── seed-campaigns.js</p>
+<p>│   └── migrate-and-seed.js</p>
+<p>├── server.js               # Express server</p>
+<p>├── package.json</p>
+<p>├── vite.config.mjs         # Vite configuration</p>
+<p>├── tailwind.config.js      # Tailwind configuration</p>
+<p>└── README.md</p>
+</code></pre></p><p><h2>API Documentation</h2></p><p><h3>Authentication</h3>
+<li><code>POST /api/auth/register</code> - Register new user</li>
+<li><code>POST /api/auth/login</code> - User login</li>
+<li><code>GET /api/auth/user</code> - Get current user</li></p><p><h3>Campaigns</h3>
+<li><code>GET /api/campaigns</code> - List all campaigns (with filters)</li>
+<li><code>GET /api/campaigns/:id</code> - Get campaign details</li>
+<li><code>POST /api/campaigns</code> - Create new campaign</li>
+<li><code>PUT /api/campaigns/:id</code> - Update campaign</li>
+<li><code>DELETE /api/campaigns/:id</code> - Delete campaign</li>
+<li><code>GET /api/campaigns/:id/updates</code> - Get campaign updates</li>
+<li><code>POST /api/campaigns/:id/updates</code> - Post campaign update</li>
+<li><code>GET /api/campaigns/:id/comments</code> - Get campaign comments</li>
+<li><code>POST /api/campaigns/:id/comments</code> - Post comment</li></p><p><h3>Donations</h3>
+<li><code>GET /api/donations</code> - List donations</li>
+<li><code>POST /api/donations</code> - Create donation</li>
+<li><code>GET /api/campaigns/:id/donations</code> - Get campaign donations</li></p><p><h3>Favorites</h3>
+<li><code>GET /api/favorites</code> - Get user favorites</li>
+<li><code>POST /api/favorites/:campaignId</code> - Add to favorites</li>
+<li><code>DELETE /api/favorites/:campaignId</code> - Remove from favorites</li></p><p><h3>Admin</h3>
+<li><code>GET /api/admin/campaigns/pending</code> - Get pending campaigns</li>
+<li><code>PUT /api/admin/campaigns/:id/approve</code> - Approve campaign</li>
+<li><code>PUT /api/admin/campaigns/:id/reject</code> - Reject campaign</li>
+<li><code>GET /api/admin/users</code> - List all users</li>
+<li><code>GET /api/admin/analytics</code> - Platform analytics</li></p><p><h3>Analytics</h3>
+<li><code>GET /api/analytics/campaign/:id</code> - Campaign analytics</li>
+<li><code>GET /api/analytics/student/:userId</code> - Student analytics</li></p><p><h3>Profiles</h3>
+<li><code>GET /api/profiles/:userId</code> - Get user profile</li>
+<li><code>PUT /api/profiles/:userId</code> - Update profile</li>
+<li><code>PUT /api/admin/profiles/:userId/approve</code> - Approve profile</li>
+<li><code>PUT /api/admin/profiles/:userId/reject</code> - Reject profile</li></p><p>For detailed API documentation, see <a href="COMPLETE_API_REFERENCE.md">COMPLETE_API_REFERENCE.md</a></p><p><h2>Database Schema</h2></p><p><h3>Core Tables</h3>
+<li><strong>users</strong> - User accounts (email, password, role)</li>
+<li><strong>campaigns</strong> - Campaign information</li>
+<li><strong>donations</strong> - Donation records</li>
+<li><strong>campaign_updates</strong> - Campaign progress updates</li>
+<li><strong>campaign_comments</strong> - User comments</li>
+<li><strong>favorites</strong> - User favorite campaigns</li>
+<li><strong>campaign_metrics</strong> - Campaign analytics</li>
+<li><strong>profiles</strong> - Extended user profile information</li>
+<li><strong>share_tracking</strong> - Social media share tracking</li></p><p><h2>Development Workflow</h2></p><p><h3>Adding Test Data</h3>
+<pre><code class="language-bash">node add-test-user.js          # Add test users
+<p>node seed-sample-data.js       # Add sample campaigns</p>
+</code></pre></p><p><h3>Testing Features</h3>
+<pre><code class="language-bash">node test-admin-functionality.js    # Test admin features
+<p>node test-campaign-review.js        # Test review workflow</p>
+<p>node test-favorites.js              # Test favorites system</p>
+</code></pre></p><p><h3>Database Management</h3>
+<pre><code class="language-bash">node create-database.js        # Create database
+<p>node initialize-tables.js      # Create tables</p>
+<p>node setup-profile-tables.js   # Setup profile tables</p>
+</code></pre></p><p><h2>Environment Configuration</h2></p><p>The application supports different environments through the <code>.env</code> file:</p><p><li><strong>Development</strong>: Full logging, CORS enabled, hot reload</li>
+<li><strong>Production</strong>: Optimized build, secure configurations</li></p><p><h2>Security Features</h2></p><p><li><strong>JWT Authentication</strong>: Secure token-based auth</li>
+<li><strong>Password Hashing</strong>: Bcrypt password encryption</li>
+<li><strong>SQL Injection Protection</strong>: Parameterized queries</li>
+<li><strong>CORS Configuration</strong>: Controlled cross-origin access</li>
+<li><strong>File Upload Validation</strong>: Image type and size restrictions</li>
+<li><strong>Role-based Access Control</strong>: Protected admin routes</li></p><p><h2>Browser Support</h2></p><p><li>Chrome (latest)</li>
+<li>Firefox (latest)</li>
+<li>Safari (latest)</li>
+<li>Edge (latest)</li></p><p><h2>Contributing</h2></p><p><li>Fork the repository</li>
+<li>Create your feature branch (<code>git checkout -b feature/AmazingFeature</code>)</li>
+<li>Commit your changes (<code>git commit -m 'Add some AmazingFeature'</code>)</li>
+<li>Push to the branch (<code>git push origin feature/AmazingFeature</code>)</li>
+<li>Open a Pull Request</li></p><p><h2>Documentation</h2></p><p>Additional documentation available:
+<li><a href="ADMIN_SYSTEM_DOCUMENTATION.md">Admin System Documentation</a></li>
+<li><a href="CAMPAIGN_REVIEW_WORKFLOW.md">Campaign Review Workflow</a></li>
+<li><a href="COMPLETE_API_REFERENCE.md">Complete API Reference</a></li>
+<li><a href="IMPLEMENTATION_SUMMARY.md">Implementation Summary</a></li>
+<li><a href="GOFUNDME_FEATURE_COMPARISON.md">GoFundMe Feature Comparison</a></li>
+<li><a href="DONOR_WALL_FEATURE.md">Donor Wall Feature</a></li>
+<li><a href="MILESTONE_CELEBRATIONS_FEATURE.md">Milestone Celebrations</a></li></p><p><h2>Troubleshooting</h2></p><p><h3>Database Connection Issues</h3>
+<li>Verify MySQL is running</li>
+<li>Check database credentials in <code>.env</code></li>
+<li>Ensure database exists: <code>node create-database.js</code></li></p><p><h3>Frontend Cannot Connect to Backend</h3>
+<li>Ensure backend is running on port 5000</li>
+<li>Check Vite proxy configuration in <code>vite.config.mjs</code></li>
+<li>Verify CORS settings in <code>server.js</code></li></p><p><h3>Image Upload Failures</h3>
+<li>Check <code>uploads/campaigns/</code> directory exists</li>
+<li>Verify write permissions</li>
+<li>Ensure file size is under limit</li></p><p><h2>License</h2></p><p>This project is licensed under the ISC License.</p><p><h2>Support</h2></p><p>For issues and questions:
+<li>GitHub Issues: https://github.com/lkiwan/edufund/issues</li>
+<li>Email: omar.arhoune@gmail.com</li></p><p><h2>Acknowledgments</h2></p><p>Built with modern web technologies and best practices for educational crowdfunding.
+
+
+  <div class="footer">
+    <p><strong>EduFund Platform</strong> - Educational Crowdfunding Platform</p>
+    <p>Generated by Claude Code | Contact: omar.arhoune@gmail.com</p>
+    <p>© 2025 All rights reserved</p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,2375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COMPLETE PLATFORM DOCUMENTATION - EduFund Platform</title>
+  <style>
+    @page {
+      margin: 2cm;
+      size: A4;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: white;
+    }
+
+    h1 {
+      color: #10b981;
+      border-bottom: 3px solid #10b981;
+      padding-bottom: 10px;
+      margin-top: 30px;
+      page-break-before: always;
+    }
+
+    h1:first-of-type {
+      page-break-before: auto;
+    }
+
+    h2 {
+      color: #059669;
+      border-bottom: 2px solid #d1fae5;
+      padding-bottom: 8px;
+      margin-top: 25px;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      color: #047857;
+      margin-top: 20px;
+      page-break-after: avoid;
+    }
+
+    pre {
+      background: #f3f4f6;
+      border-left: 4px solid #10b981;
+      padding: 15px;
+      overflow-x: auto;
+      border-radius: 5px;
+      page-break-inside: avoid;
+    }
+
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    pre code {
+      background: none;
+      padding: 0;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 20px 0;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    th {
+      background: #10b981;
+      color: white;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background: #f9fafb;
+    }
+
+    ul, ol {
+      margin: 15px 0;
+      padding-left: 30px;
+    }
+
+    li {
+      margin: 8px 0;
+      line-height: 1.5;
+    }
+
+    a {
+      color: #10b981;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    hr {
+      border: none;
+      border-top: 2px solid #e5e7eb;
+      margin: 30px 0;
+    }
+
+    strong {
+      color: #1f2937;
+      font-weight: 600;
+    }
+
+    blockquote {
+      border-left: 4px solid #10b981;
+      padding-left: 20px;
+      margin: 20px 0;
+      color: #6b7280;
+      font-style: italic;
+      background: #f9fafb;
+      padding: 15px 20px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      page-break-after: avoid;
+    }
+
+    .header h1 {
+      border: none;
+      margin: 0;
+      font-size: 2.5em;
+    }
+
+    .header p {
+      color: #6b7280;
+      font-size: 1.1em;
+      margin: 10px 0;
+    }
+
+    .footer {
+      margin-top: 50px;
+      padding-top: 20px;
+      border-top: 2px solid #e5e7eb;
+      text-align: center;
+      color: #6b7280;
+      font-size: 0.9em;
+      page-break-before: avoid;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+
+    @media print {
+      body {
+        max-width: 100%;
+      }
+
+      a {
+        color: #333;
+        text-decoration: none;
+      }
+
+      a[href]:after {
+        content: " (" attr(href) ")";
+        font-size: 0.8em;
+        color: #666;
+      }
+
+      h1, h2, h3 {
+        page-break-after: avoid;
+      }
+
+      pre, table, img {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>EduFund Platform</h1>
+    <p>COMPLETE PLATFORM DOCUMENTATION</p>
+    <p>Generated: 15/11/2025 03:19:28</p>
+  </div>
+
+  <h1>EduFund Platform - Complete Documentation</h1>
+<strong>Generated:</strong> November 15, 2025
+<strong>Platform Version:</strong> 1.0
+<strong>Status:</strong> Production Ready
+
+<hr/>
+
+<h2>📋 Table of Contents</h2>
+
+<li><a href="#project-overview">Project Overview</a></li>
+<li><a href="#development-timeline">Development Timeline</a></li>
+<li><a href="#complete-feature-list">Complete Feature List</a></li>
+<li><a href="#technical-architecture">Technical Architecture</a></li>
+<li><a href="#database-schema">Database Schema</a></li>
+<li><a href="#api-documentation">API Documentation</a></li>
+<li><a href="#frontend-components">Frontend Components</a></li>
+<li><a href="#user-roles--permissions">User Roles & Permissions</a></li>
+<li><a href="#workflows--processes">Workflows & Processes</a></li>
+<li><a href="#analytics--metrics">Analytics & Metrics</a></li>
+<li><a href="#security-features">Security Features</a></li>
+<li><a href="#deployment-guide">Deployment Guide</a></li>
+<li><a href="#testing-documentation">Testing Documentation</a></li>
+<li><a href="#troubleshooting">Troubleshooting</a></li>
+
+<hr/>
+
+<h2>1. Project Overview</h2>
+
+<h3>Platform Name</h3>
+<strong>EduFund</strong> - Educational Crowdfunding Platform
+
+<h3>Mission</h3>
+<p>Connect students in need of educational funding with donors who want to make a difference in education.</p>
+
+<h3>Core Functionality</h3>
+<li>Students create fundraising campaigns for educational expenses</li>
+<li>Donors discover and support campaigns</li>
+<li>Admins review and approve campaigns</li>
+<li>Complete analytics and tracking system</li>
+
+<h3>Technology Stack</h3>
+
+<strong>Frontend:</strong>
+<li>React 18.2.0</li>
+<li>Vite 4.4.5</li>
+<li>React Router 6.15.0</li>
+<li>TailwindCSS 3.3.3</li>
+<li>Framer Motion 10.16.1</li>
+<li>Lucide React (Icons)</li>
+<li>React Toastify (Notifications)</li>
+<li>Recharts (Charts & Analytics)</li>
+
+<strong>Backend:</strong>
+<li>Node.js 18+</li>
+<li>Express.js 4.18.2</li>
+<li>MySQL 8.0+</li>
+<li>Bcrypt.js (Password Hashing)</li>
+<li>JWT (Authentication)</li>
+<li>Multer (File Uploads)</li>
+<li>Sharp (Image Processing)</li>
+<li>Nodemailer (Email Service)</li>
+
+<strong>Development Tools:</strong>
+<li>ESLint</li>
+<li>PostCSS</li>
+<li>dotenv</li>
+<li>express-rate-limit</li>
+
+<hr/>
+
+<h2>2. Development Timeline</h2>
+
+<h3>Initial Setup - November 11, 2025</h3>
+<li>✅ Project initialization</li>
+<li>✅ Database creation (edufund)</li>
+<li>✅ Core tables setup (users, campaigns, donations)</li>
+<li>✅ Basic authentication system</li>
+<li>✅ Initial UI components</li>
+
+<h3>Phase 1: Core Features - November 11, 2025</h3>
+<li>✅ User registration (Student, Donor, Admin roles)</li>
+<li>✅ Campaign creation and management</li>
+<li>✅ Donation processing</li>
+<li>✅ Basic dashboards (Student, Donor, Admin)</li>
+<li>✅ Campaign discovery page</li>
+<li>✅ Campaign detail page with donation modal</li>
+
+<h3>Phase 2: Enhanced Features - November 11, 2025</h3>
+<li>✅ Social share buttons with database tracking</li>
+<li>✅ Follow/Bookmark campaigns (Favorites system)</li>
+<li>✅ Advanced filters and search</li>
+<li>✅ Campaign review workflow</li>
+<li>✅ Donor wall display</li>
+<li>✅ Milestone celebrations</li>
+
+<strong>Commit:</strong> <code>9b38edd</code> - Initial commit: Educational Funding Platform
+
+<h3>Phase 3: Admin & Workflow - November 11, 2025</h3>
+<li>✅ Campaign approval/rejection system</li>
+<li>✅ Admin dashboard with pending campaigns</li>
+<li>✅ Audit log and history tracking</li>
+<li>✅ Profile verification system</li>
+<li>✅ Email notification queue</li>
+
+<h3>Phase 4: User Experience - November 15, 2025</h3>
+<li>✅ Enhanced toast notification system</li>
+<li>✅ Homepage statistics API</li>
+<li>✅ Improved campaign creation (user ID fix)</li>
+<li>✅ Better UI styling and animations</li>
+
+<strong>Commit:</strong> <code>79b7e7f</code> - Enhance platform UX with improved stats, toast notifications, and authentication
+
+<h3>Phase 5: Analytics & Visibility - November 15, 2025</h3>
+<li>✅ Campaign view tracking system</li>
+<li>✅ Trending campaigns algorithm</li>
+<li>✅ Platform statistics dashboard</li>
+<li>✅ Real-time activity feed</li>
+<li>✅ Enhanced analytics for students</li>
+<li>✅ Admin analytics dashboard</li>
+
+<strong>Commit:</strong> <code>3d6b60c</code> - Add comprehensive analytics and visibility features
+
+<h3>Documentation - November 11, 2025</h3>
+<li>✅ README.md with setup instructions</li>
+<li>✅ API documentation</li>
+<li>✅ Feature comparison with GoFundMe</li>
+<li>✅ Campaign review workflow docs</li>
+<li>✅ Donor wall feature docs</li>
+<li>✅ Milestone celebrations docs</li>
+
+<strong>Commit:</strong> <code>6693e1b</code> - Update README with comprehensive documentation
+
+<hr/>
+
+<h2>3. Complete Feature List</h2>
+
+<h3>A. Authentication & User Management</h3>
+
+<p>#### User Registration ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+<li>Multi-role registration (Student, Donor, Admin)</li>
+<li>Email and password validation</li>
+<li>Password strength indicator</li>
+<li>Phone number validation</li>
+<li>Full name capture</li>
+<li>Automatic role-based redirect</li>
+<li>BCrypt password hashing (10 salt rounds)</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/Login.jsx</code> (579 lines)</li>
+<li><code>server.js</code> - Auth endpoints (lines 50-115)</li>
+
+<strong>Database Tables:</strong>
+<li><code>users</code> - User accounts</li>
+
+<p>#### User Login ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+<li>Email/password authentication</li>
+<li>Remember me functionality</li>
+<li>Password visibility toggle</li>
+<li>Demo credentials for testing</li>
+<li>Session management with localStorage</li>
+<li>Role-based dashboard routing</li>
+
+<strong>Demo Accounts:</strong>
+<li>Student: sarah.johnson@student.edu / password123</li>
+<li>Donor: john.doe@donor.com / password123</li>
+<li>Admin: admin@edufund.com / admin123</li>
+
+<h3>B. Campaign Management</h3>
+
+<p>#### Campaign Creation ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+<li>Rich form with validation</li>
+<li>Image upload with preview</li>
+<li>Category selection</li>
+<li>Location/university selection</li>
+<li>Goal amount setting</li>
+<li>Deadline picker</li>
+<li>Description editor</li>
+<li>Auto-save draft functionality</li>
+
+<strong>Features:</strong>
+<li>Minimum goal: 1,000 MAD</li>
+<li>Maximum goal: 1,000,000 MAD</li>
+<li>Deadline: 1-365 days from creation</li>
+<li>Image upload: Max 5MB, JPG/PNG</li>
+<li>User ID validation</li>
+<li>Draft status on creation</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/CreateCampaign.jsx</code></li>
+<li><code>server.js</code> - Campaign endpoints (lines 188-1700)</li>
+
+<p>#### Campaign Discovery ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+<strong>Enhanced:</strong> November 11, 2025
+
+<li>Grid/List view toggle</li>
+<li>Advanced filtering:</li>
+<p>  - Category (Education, Medical, Emergency, etc.)</p>
+<p>  - Location/City</p>
+<p>  - University</p>
+<p>  - Amount range (min/max)</p>
+<p>  - Time remaining</p>
+<p>  - Funding progress</p>
+<li>Real-time search with debouncing</li>
+<li>Sort options (newest, ending soon, most funded)</li>
+<li>Pagination</li>
+<li>Favorite button on cards</li>
+
+<strong>Filters Available:</strong>
+<li>By Category: 10+ categories</li>
+<li>By Time: Ending soon, Month left, More time</li>
+<li>By Progress: Nearly funded (>75%), Halfway (25-75%), Just started (<25%)</li>
+<li>By Amount: Custom min/max range</li>
+<li>By Location: All Moroccan cities</li>
+<li>By University: All major universities</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/Discover.jsx</code></li>
+
+<p>#### Campaign Details ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<li>Full campaign information display</li>
+<li>Progress bar with percentage</li>
+<li>Donor count and amount raised</li>
+<li>Days remaining countdown</li>
+<li>Campaign organizer info</li>
+<li>Image gallery</li>
+<li>Description with formatting</li>
+<li>Tabs:</li>
+<p>  - Story</p>
+<p>  - Updates</p>
+<p>  - Donors</p>
+<p>  - Comments</p>
+<p>  - Donor Wall</p>
+
+<strong>Interactive Elements:</strong>
+<li>Donate button (opens modal)</li>
+<li>Share buttons (Facebook, Twitter, WhatsApp, LinkedIn, Copy)</li>
+<li>Favorite/Follow button</li>
+<li>Comment section</li>
+<li>Update subscription</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/CampaignDetails.jsx</code></li>
+
+<h3>C. Donation System</h3>
+
+<p>#### Donation Processing ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Donation Modal Features:</strong>
+<li>Preset amounts (100, 250, 500, 1000 MAD)</li>
+<li>Custom amount input</li>
+<li>Donor name and email</li>
+<li>Optional message</li>
+<li>Anonymous donation option</li>
+<li>Tip to cover fees option</li>
+<li>Payment method selection</li>
+<li>Terms acceptance</li>
+
+<strong>Payment Methods:</strong>
+<li>Credit/Debit Card</li>
+<li>Bank Transfer</li>
+<li>Mobile Money</li>
+<li>PayPal</li>
+
+<strong>Database Tracking:</strong>
+<li>Donation amount</li>
+<li>Tip amount</li>
+<li>Donor information</li>
+<li>Anonymous flag</li>
+<li>Payment method</li>
+<li>Status tracking</li>
+<li>Created timestamp</li>
+<li>Receipt generation</li>
+
+<strong>Files:</strong>
+<li><code>src/components/DonationModal.jsx</code></li>
+<li><code>server.js</code> - Donation endpoints</li>
+
+<h3>D. Social Features</h3>
+
+<p>#### Share Tracking ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Platforms:</strong>
+<li>Facebook</li>
+<li>Twitter (X)</li>
+<li>WhatsApp</li>
+<li>LinkedIn</li>
+<li>Copy Link</li>
+
+<strong>Features:</strong>
+<li>One-click sharing</li>
+<li>Share count display</li>
+<li>Database tracking per platform</li>
+<li>Toast notifications on share</li>
+<li>Analytics integration</li>
+
+<strong>Database:</strong>
+<li><code>social_shares</code> table</li>
+<li>Tracks: platform, user_id, campaign_id, timestamp</li>
+
+<strong>Files:</strong>
+<li><code>src/components/ShareButtons.jsx</code></li>
+<li><code>server.js</code> - Share tracking endpoints</li>
+
+<p>#### Campaign Followers (Favorites) ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Features:</strong>
+<li>Heart icon to bookmark campaigns</li>
+<li>Two variants: icon-only, button with count</li>
+<li>Real-time follower count</li>
+<li>Persistent across sessions</li>
+<li>User dashboard integration</li>
+<li>Toast notifications</li>
+
+<strong>Database:</strong>
+<li><code>campaign_followers</code> table</li>
+<li>Prevents duplicate follows</li>
+<li>Tracks timestamp</li>
+
+<strong>Files:</strong>
+<li><code>src/components/FavoriteButton.jsx</code></li>
+
+<p>#### Donor Wall ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Displays:</strong>
+<li>Top 5 donors leaderboard</li>
+<li>First donor badge</li>
+<li>Recent 5 donors</li>
+<li>Donor statistics (unique donors, average donation)</li>
+<li>Anonymous donor support</li>
+
+<strong>Visual Design:</strong>
+<li>Gold gradient for #1 donor</li>
+<li>Crown icon for top donor</li>
+<li>Award icon for first donor</li>
+<li>Rank badges (#1-#5)</li>
+<li>Color-coded cards</li>
+
+<strong>Database Query:</strong>
+<li>Aggregates donations by donor name</li>
+<li>Calculates statistics in SQL</li>
+<li>Orders by total donated</li>
+
+<strong>Files:</strong>
+<li><code>src/components/DonorWall.jsx</code></li>
+<li><code>server.js</code> - Donor wall endpoint</li>
+
+<h3>E. Admin Features</h3>
+
+<p>#### Campaign Review Workflow ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Workflow Stages:</strong>
+<li><strong>Draft</strong> - Student creating campaign</li>
+<li><strong>Pending</strong> - Submitted for review</li>
+<li><strong>Published</strong> - Approved by admin</li>
+<li><strong>Rejected</strong> - Rejected with reason</li>
+
+<strong>Admin Actions:</strong>
+<li>View all pending campaigns</li>
+<li>See full campaign details</li>
+<li>Approve with notes</li>
+<li>Reject with reason</li>
+<li>View approval history</li>
+<li>Audit trail</li>
+
+<strong>Database Tables:</strong>
+<li><code>campaign_status_history</code> - All status changes</li>
+<li><code>audit_log</code> - Admin actions</li>
+
+<strong>Features:</strong>
+<li>Email notifications on approval/rejection</li>
+<li>Moderation notes storage</li>
+<li>Approval timestamp</li>
+<li>Approver tracking (admin_id)</li>
+<li>Rejection reason mandatory</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/AdminDashboard.jsx</code></li>
+<li><code>server.js</code> - Admin endpoints (lines 1700+)</li>
+
+<p>#### User Management ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Admin Can:</strong>
+<li>View all users</li>
+<li>Filter by role</li>
+<li>See user statistics</li>
+<li>View user activity</li>
+<li>Manage user status</li>
+
+<strong>Statistics:</strong>
+<li>Total users</li>
+<li>Students count</li>
+<li>Donors count</li>
+<li>Admins count</li>
+<li>Recent registrations</li>
+
+<h3>F. Analytics & Metrics</h3>
+
+<p>#### Campaign View Tracking ✅</p>
+<strong>Date Implemented:</strong> November 15, 2025
+
+<strong>Tracks:</strong>
+<li>User ID (if logged in)</li>
+<li>IP address</li>
+<li>User agent</li>
+<li>Referrer URL</li>
+<li>Session ID</li>
+<li>Timestamp (viewed_at)</li>
+
+<strong>Database:</strong>
+<li><code>campaign_views</code> table</li>
+<li>Linked to <code>user_activity</code> for logged-in users</li>
+
+<strong>API:</strong>
+<li><code>POST /api/analytics/track-view/:campaignId</code></li>
+
+<p>#### Trending Campaigns ✅</p>
+<strong>Date Implemented:</strong> November 15, 2025
+
+<strong>Algorithm:</strong>
+<li>Views: 1 point each</li>
+<li>Donations: 10 points each</li>
+<li>Shares: 5 points each</li>
+<li>Followers: 3 points each</li>
+
+<strong>Time Periods:</strong>
+<li>Last Hour</li>
+<li>Last Day</li>
+<li>Last Week</li>
+<li>Last Month</li>
+
+<strong>Features:</strong>
+<li>Auto-calculates trending score</li>
+<li>Only shows campaigns with score > 0</li>
+<li>Orders by score DESC</li>
+<li>Configurable limit</li>
+<li>Caching support</li>
+
+<strong>API:</strong>
+<li><code>GET /api/analytics/trending?period=day&limit=10</code></li>
+
+<strong>Files:</strong>
+<li><code>src/components/TrendingSection.jsx</code></li>
+<li><code>analytics-endpoints.js</code></li>
+
+<p>#### Campaign Analytics ✅</p>
+<strong>Date Implemented:</strong> November 15, 2025
+<strong>Enhanced:</strong> November 15, 2025
+
+<strong>Metrics:</strong>
+<li>Total views</li>
+<li>Unique visitors</li>
+<li>Total donations</li>
+<li>Conversion rate (visitors → donors)</li>
+<li>Social shares breakdown</li>
+<li>Follower count</li>
+<li>Comment count</li>
+
+<strong>Charts:</strong>
+<li>Views over time (bar chart)</li>
+<li>Donations over time (line chart)</li>
+<li>Traffic sources (pie chart)</li>
+<li>Engagement metrics</li>
+
+<strong>Time Ranges:</strong>
+<li>7 days</li>
+<li>30 days</li>
+<li>90 days</li>
+<li>All time</li>
+
+<strong>API:</strong>
+<li><code>GET /api/analytics/campaign/:campaignId?timeRange=30</code></li>
+
+<strong>Files:</strong>
+<li><code>src/components/CampaignAnalytics.jsx</code> (262 lines)</li>
+
+<p>#### Platform Statistics ✅</p>
+<strong>Date Implemented:</strong> November 15, 2025
+
+<strong>Public Dashboard (<code>/platform-stats</code>):</strong>
+<li>Total campaigns count</li>
+<li>Total amount raised</li>
+<li>Total users</li>
+<li>Success rate percentage</li>
+<li>Top performing campaigns</li>
+<li>Daily activity trends</li>
+
+<strong>Admin-Only Metrics:</strong>
+<li>Active campaigns</li>
+<li>Completed campaigns</li>
+<li>Total donations count</li>
+<li>Total views</li>
+<li>New users trend</li>
+<li>New campaigns trend</li>
+
+<strong>Time Range Filters:</strong>
+<li>7 days</li>
+<li>30 days</li>
+<li>90 days</li>
+<li>All time</li>
+
+<strong>API:</strong>
+<li><code>GET /api/analytics/platform?timeRange=30</code></li>
+
+<strong>Files:</strong>
+<li><code>src/pages/PlatformStats.jsx</code></li>
+
+<p>#### Real-Time Activity Feed ✅</p>
+<strong>Date Implemented:</strong> November 15, 2025
+
+<strong>Shows:</strong>
+<li>Recent donations (with messages)</li>
+<li>New campaign launches</li>
+<li>Milestone achievements (25%, 50%, 75%, 100%)</li>
+<li>Live indicator</li>
+
+<strong>Features:</strong>
+<li>Auto-refresh every 30 seconds</li>
+<li>Configurable limit</li>
+<li>Time ago formatting</li>
+<li>Click to navigate</li>
+<li>Icons for each activity type</li>
+
+<strong>Activity Types:</strong>
+<li>💚 Donation</li>
+<li>📢 New Campaign</li>
+<li>🏆 Milestone (100%)</li>
+<li>⭐ Milestone (75%)</li>
+<li>🎯 Milestone (50%)</li>
+<li>🎉 Milestone (25%)</li>
+
+<strong>API:</strong>
+<li><code>GET /api/analytics/activity-feed?limit=50</code></li>
+
+<strong>Files:</strong>
+<li><code>src/components/ActivityFeed.jsx</code></li>
+
+<p>#### User View History ✅</p>
+<strong>Date Implemented:</strong> November 15, 2025
+
+<strong>Tracks:</strong>
+<li>Recently viewed campaigns</li>
+<li>View count per campaign</li>
+<li>Last viewed timestamp</li>
+<li>"Continue exploring" section</li>
+
+<strong>Features:</strong>
+<li>Personalized for each user</li>
+<li>Shows last 20 viewed campaigns</li>
+<li>Links to campaign details</li>
+<li>Time since last view</li>
+
+<strong>API:</strong>
+<li><code>GET /api/analytics/user/:userId/history?limit=20</code></li>
+
+<h3>G. Gamification Features</h3>
+
+<p>#### Milestone Celebrations ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Milestones:</strong>
+<li>25% - Blue confetti 🎉 "First Quarter Complete!"</li>
+<li>50% - Green confetti 🚀 "Halfway There!"</li>
+<li>75% - Orange confetti ⭐ "Three Quarters Done!"</li>
+<li>100% - Gold confetti 🏆 "Goal Achieved!"</li>
+
+<strong>Features:</strong>
+<li>Automatic detection</li>
+<li>Confetti animations (canvas-confetti library)</li>
+<li>Color-coded by milestone</li>
+<li>Celebration modal with stats</li>
+<li>Share milestone button</li>
+<li>Progress bar markers</li>
+
+<strong>Confetti Effects:</strong>
+<li>Dual-direction (left + right)</li>
+<li>Color-matched to theme</li>
+<li>3-5 second duration</li>
+<li>Extra burst for 100%</li>
+
+<strong>Files:</strong>
+<li><code>src/components/MilestoneCelebration.jsx</code></li>
+<li><code>src/components/ui/Progress.jsx</code> (enhanced)</li>
+
+<h3>H. UI Components Library</h3>
+
+<p>#### Core Components</p>
+<strong>Date Created:</strong> November 11, 2025
+
+<li><strong>Button</strong> - 6 variants, 3 sizes, icons support</li>
+<li><strong>Card</strong> - 3 variants, flexible padding</li>
+<li><strong>Badge</strong> - 8 color schemes</li>
+<li><strong>Progress</strong> - With milestone markers</li>
+<li><strong>Tabs</strong> - 2 variants, animated</li>
+<li><strong>Icon</strong> - Lucide React integration</li>
+<li><strong>Image</strong> - Lazy loading, fallback</li>
+
+<strong>Files:</strong>
+<li><code>src/components/ui/Button.jsx</code></li>
+<li><code>src/components/ui/Card.jsx</code></li>
+<li><code>src/components/ui/Badge.jsx</code></li>
+<li><code>src/components/ui/Progress.jsx</code></li>
+<li><code>src/components/ui/Tabs.jsx</code></li>
+<li><code>src/components/AppIcon.jsx</code></li>
+<li><code>src/components/AppImage.jsx</code></li>
+
+<p>#### Layout Components</p>
+
+<li><strong>Navigation</strong> - Responsive, role-based menu</li>
+<li><strong>Footer</strong> - Links, social media, newsletter</li>
+<li><strong>ScrollToTop</strong> - Auto-scroll on route change</li>
+<li><strong>ErrorBoundary</strong> - Error handling</li>
+
+<strong>Files:</strong>
+<li><code>src/components/layout/Navigation.jsx</code></li>
+<li><code>src/components/layout/Footer.jsx</code></li>
+
+<h3>I. Dashboard Pages</h3>
+
+<p>#### Student Dashboard ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Features:</strong>
+<li>My campaigns overview</li>
+<li>Quick stats (total raised, donors, views)</li>
+<li>Create new campaign button</li>
+<li>Campaign management:</li>
+<p>  - View details</p>
+<p>  - Edit campaign</p>
+<p>  - View analytics</p>
+<p>  - Submit for review</p>
+<li>Recent donations list</li>
+<li>Performance tips</li>
+
+<strong>Tabs:</strong>
+<li>Active Campaigns</li>
+<li>Draft Campaigns</li>
+<li>Completed Campaigns</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/StudentDashboard.jsx</code></li>
+
+<p>#### Donor Dashboard ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Features:</strong>
+<li>Donation history</li>
+<li>Total impact summary</li>
+<li>Favorite campaigns</li>
+<li>Recommended campaigns</li>
+<li>Donation receipts</li>
+<li>Download all receipts button</li>
+
+<strong>Stats:</strong>
+<li>Total donated</li>
+<li>Campaigns supported</li>
+<li>Donor since date</li>
+<li>Impact score</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/DonorDashboard.jsx</code></li>
+
+<p>#### Admin Dashboard ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Features:</strong>
+<li>Pending campaigns review</li>
+<li>Platform statistics</li>
+<li>User management</li>
+<li>Content moderation</li>
+<li>Audit log viewer</li>
+<li>System settings</li>
+
+<strong>Sections:</strong>
+<li>Overview (stats cards)</li>
+<li>Pending Reviews</li>
+<li>Recent Activity</li>
+<li>User Statistics</li>
+<li>System Health</li>
+
+<strong>Files:</strong>
+<li><code>src/pages/AdminDashboard.jsx</code></li>
+
+<h3>J. Notification System</h3>
+
+<p>#### Toast Notifications ✅</p>
+<strong>Date Implemented:</strong> November 15, 2025
+
+<strong>Types:</strong>
+<li>Success (3s, green)</li>
+<li>Error (5s, red)</li>
+<li>Warning (4.5s, yellow)</li>
+<li>Info (4s, blue)</li>
+
+<strong>Special Toasts:</strong>
+<li>Campaign toast (🎓 icon, 5s)</li>
+<li>Donation toast (💙 icon, 5s)</li>
+
+<strong>Features:</strong>
+<li>Auto-close configurable</li>
+<li>Slide animation</li>
+<li>Max 3 toasts at once</li>
+<li>Positioned top-right</li>
+<li>Dismiss on click</li>
+<li>Progress bar</li>
+<li>Custom styling</li>
+
+<strong>Files:</strong>
+<li><code>src/utils/toast.js</code></li>
+<li><code>src/App.jsx</code> - ToastContainer config</li>
+
+<p>#### Email Notifications ✅</p>
+<strong>Date Implemented:</strong> November 11, 2025
+
+<strong>Email Types:</strong>
+<li>Welcome email</li>
+<li>Campaign approved</li>
+<li>Campaign rejected</li>
+<li>New donation received</li>
+<li>Milestone reached</li>
+<li>Withdrawal processed</li>
+
+<strong>Features:</strong>
+<li>Queue system</li>
+<li>Template support</li>
+<li>Retry mechanism</li>
+<li>Sent status tracking</li>
+
+<strong>Database:</strong>
+<li><code>email_notifications</code> table</li>
+
+<strong>Files:</strong>
+<li><code>email-automation.js</code></li>
+
+<hr/>
+
+<h2>4. Technical Architecture</h2>
+
+<h3>Frontend Architecture</h3>
+
+<p>``<code></p>
+<p>src/</p>
+<p>├── components/           # Reusable components</p>
+<p>│   ├── ui/              # UI primitives</p>
+<p>│   ├── layout/          # Navigation, Footer</p>
+<p>│   ├── ActivityFeed.jsx</p>
+<p>│   ├── CampaignAnalytics.jsx</p>
+<p>│   ├── DonationModal.jsx</p>
+<p>│   ├── DonorWall.jsx</p>
+<p>│   ├── FavoriteButton.jsx</p>
+<p>│   ├── MilestoneCelebration.jsx</p>
+<p>│   ├── ShareButtons.jsx</p>
+<p>│   └── TrendingSection.jsx</p>
+<p>├── pages/               # Page components</p>
+<p>│   ├── Home.jsx</p>
+<p>│   ├── Discover.jsx</p>
+<p>│   ├── CampaignDetails.jsx</p>
+<p>│   ├── CreateCampaign.jsx</p>
+<p>│   ├── Login.jsx</p>
+<p>│   ├── StudentDashboard.jsx</p>
+<p>│   ├── DonorDashboard.jsx</p>
+<p>│   ├── AdminDashboard.jsx</p>
+<p>│   └── PlatformStats.jsx</p>
+<p>├── services/            # API layer</p>
+<p>│   └── api.js          # All API calls</p>
+<p>├── utils/               # Utilities</p>
+<p>│   ├── currency.js     # MAD formatting</p>
+<p>│   └── toast.js        # Notifications</p>
+<p>├── data/                # Static data</p>
+<p>│   ├── moroccoLocations.js</p>
+<p>│   └── moroccoUniversities.js</p>
+<p>├── styles/              # Global styles</p>
+<p>│   └── index.css</p>
+<p>├── App.jsx              # Root component</p>
+<p>├── Routes.jsx           # Route config</p>
+<p>└── index.jsx            # Entry point</p>
+</code>`<code>
+
+<h3>Backend Architecture</h3>
+
+</code>`<code>
+<p>├── server.js            # Main server (2700+ lines)</p>
+<p>├── analytics-endpoints.js  # Analytics API</p>
+<p>├── routes/</p>
+<p>│   └── profileRoutes.js # Profile endpoints</p>
+<p>├── src/</p>
+<p>│   └── db/</p>
+<p>│       └── init-db.js   # Database connection</p>
+<p>├── upload-service.js    # File uploads</p>
+<p>├── email-automation.js  # Email service</p>
+<p>└── uploads/</p>
+<p>    └── campaigns/       # Campaign images</p>
+</code>`<code>
+
+<h3>Database Design</h3>
+
+<strong>Total Tables:</strong> 34
+
+<strong>Core Tables:</strong>
+<li>users (8 rows)</li>
+<li>campaigns (9 rows)</li>
+<li>donations (34 rows)</li>
+<li>campaign_comments</li>
+<li>campaign_updates</li>
+<li>favorites</li>
+
+<strong>Analytics Tables:</strong>
+<li>campaign_views</li>
+<li>campaign_daily_stats</li>
+<li>campaign_metrics</li>
+<li>platform_daily_stats</li>
+<li>user_activity</li>
+<li>trending_campaigns</li>
+
+<strong>Social Tables:</strong>
+<li>social_shares</li>
+<li>campaign_followers</li>
+<li>share_tracking</li>
+
+<strong>Admin Tables:</strong>
+<li>audit_log</li>
+<li>campaign_status_history</li>
+<li>admin_notifications</li>
+<li>admin_settings</li>
+
+<strong>Financial Tables:</strong>
+<li>withdrawals</li>
+<li>bank_accounts</li>
+<li>donation_receipts</li>
+<li>donation_refunds</li>
+<li>offline_donations</li>
+<li>recurring_donations</li>
+
+<strong>Other Tables:</strong>
+<li>email_notifications</li>
+<li>notifications</li>
+<li>support_tickets</li>
+<li>verification_requests</li>
+<li>thank_you_messages</li>
+<li>user_preferences</li>
+<li>user_status_history</li>
+<li>campaign_beneficiaries</li>
+<li>campaign_team_members</li>
+
+<hr/>
+
+<h2>5. Database Schema</h2>
+
+<h3>Users Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE users (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  email VARCHAR(255) UNIQUE NOT NULL,</p>
+<p>  password VARCHAR(255) NOT NULL,</p>
+<p>  role ENUM('student', 'donor', 'admin', 'super-admin') DEFAULT 'student',</p>
+<p>  full_name VARCHAR(255),</p>
+<p>  phone VARCHAR(20),</p>
+<p>  bio TEXT,</p>
+<p>  profile_picture TEXT,</p>
+<p>  cover_image TEXT,</p>
+<p>  location VARCHAR(255),</p>
+<p>  verified BOOLEAN DEFAULT 0,</p>
+<p>  status ENUM('active', 'suspended', 'pending') DEFAULT 'active',</p>
+<p>  profile_approved_at DATETIME,</p>
+<p>  approved_by INT,</p>
+<p>  rejection_reason TEXT,</p>
+<p>  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP</p>
+<p>);</p>
+</code>`<code>
+
+<h3>Campaigns Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE campaigns (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  title VARCHAR(500) NOT NULL,</p>
+<p>  description TEXT NOT NULL,</p>
+<p>  goal_amount DECIMAL(10,2) NOT NULL,</p>
+<p>  current_amount DECIMAL(10,2) DEFAULT 0,</p>
+<p>  category VARCHAR(100),</p>
+<p>  city VARCHAR(255),</p>
+<p>  university VARCHAR(255),</p>
+<p>  cover_image TEXT,</p>
+<p>  status VARCHAR(50) DEFAULT 'draft',</p>
+<p>  end_date DATETIME NOT NULL,</p>
+<p>  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  user_id INT NOT NULL,</p>
+<p>  featured BOOLEAN DEFAULT 0,</p>
+<p>  student_name VARCHAR(255),</p>
+<p>  student_avatar TEXT,</p>
+<p>  student_university VARCHAR(255),</p>
+<p>  student_field VARCHAR(255),</p>
+<p>  student_year VARCHAR(50),</p>
+<p>  beneficiary_name VARCHAR(255),</p>
+<p>  beneficiary_relationship VARCHAR(100),</p>
+<p>  verification_status VARCHAR(50),</p>
+<p>  trust_score INT DEFAULT 0,</p>
+<p>  tags TEXT,</p>
+<p>  allow_anonymous BOOLEAN DEFAULT 1,</p>
+<p>  allow_comments BOOLEAN DEFAULT 1,</p>
+<p>  withdrawn_amount DECIMAL(10,2) DEFAULT 0,</p>
+<p>  approved_at DATETIME,</p>
+<p>  approved_by INT,</p>
+<p>  rejection_reason TEXT,</p>
+<p>  moderation_notes TEXT,</p>
+<p>  flagged BOOLEAN DEFAULT 0,</p>
+<p>  flag_reason TEXT,</p>
+<p>  FOREIGN KEY (user_id) REFERENCES users(id),</p>
+<p>  FOREIGN KEY (approved_by) REFERENCES users(id)</p>
+<p>);</p>
+</code>`<code>
+
+<h3>Donations Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE donations (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  campaign_id INT NOT NULL,</p>
+<p>  user_id INT,</p>
+<p>  donor_name VARCHAR(255),</p>
+<p>  donor_email VARCHAR(255),</p>
+<p>  donor_message TEXT,</p>
+<p>  is_anonymous BOOLEAN DEFAULT 0,</p>
+<p>  amount DECIMAL(10,2) NOT NULL,</p>
+<p>  tip_amount DECIMAL(10,2) DEFAULT 0,</p>
+<p>  currency VARCHAR(10) DEFAULT 'MAD',</p>
+<p>  payment_method VARCHAR(50),</p>
+<p>  status VARCHAR(50) DEFAULT 'completed',</p>
+<p>  receipt_sent BOOLEAN DEFAULT 0,</p>
+<p>  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  flagged BOOLEAN DEFAULT 0,</p>
+<p>  flag_reason TEXT,</p>
+<p>  verified_by INT,</p>
+<p>  verified_at DATETIME,</p>
+<p>  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,</p>
+<p>  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL</p>
+<p>);</p>
+</code>`<code>
+
+<h3>Campaign Views Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE campaign_views (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  campaign_id INT NOT NULL,</p>
+<p>  user_id INT NULL,</p>
+<p>  ip_address VARCHAR(45),</p>
+<p>  user_agent TEXT,</p>
+<p>  referrer TEXT,</p>
+<p>  viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  session_id VARCHAR(255),</p>
+<p>  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,</p>
+<p>  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,</p>
+<p>  INDEX idx_campaign_id (campaign_id),</p>
+<p>  INDEX idx_user_id (user_id),</p>
+<p>  INDEX idx_viewed_at (viewed_at),</p>
+<p>  INDEX idx_session_id (session_id)</p>
+<p>);</p>
+</code>`<code>
+
+<h3>Social Shares Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE social_shares (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  campaign_id INT NOT NULL,</p>
+<p>  user_id INT NULL,</p>
+<p>  platform ENUM('facebook', 'twitter', 'linkedin', 'whatsapp', 'copy') NOT NULL,</p>
+<p>  shared_url TEXT,</p>
+<p>  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,</p>
+<p>  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,</p>
+<p>  INDEX idx_campaign_id (campaign_id),</p>
+<p>  INDEX idx_platform (platform),</p>
+<p>  INDEX idx_created_at (created_at)</p>
+<p>);</p>
+</code>`<code>
+
+<h3>Campaign Followers Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE campaign_followers (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  user_id INT NOT NULL,</p>
+<p>  campaign_id INT NOT NULL,</p>
+<p>  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,</p>
+<p>  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,</p>
+<p>  UNIQUE KEY unique_follower (user_id, campaign_id),</p>
+<p>  INDEX idx_user_id (user_id),</p>
+<p>  INDEX idx_campaign_id (campaign_id)</p>
+<p>);</p>
+</code>`<code>
+
+<h3>User Activity Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE user_activity (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  user_id INT NULL,</p>
+<p>  activity_type ENUM('view', 'donate', 'share', 'follow', 'comment', 'search') NOT NULL,</p>
+<p>  campaign_id INT NULL,</p>
+<p>  metadata JSON,</p>
+<p>  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  session_id VARCHAR(255),</p>
+<p>  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,</p>
+<p>  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,</p>
+<p>  INDEX idx_user_id (user_id),</p>
+<p>  INDEX idx_activity_type (activity_type),</p>
+<p>  INDEX idx_created_at (created_at)</p>
+<p>);</p>
+</code>`<code>
+
+<h3>Trending Campaigns Table</h3>
+</code>`<code>sql
+<p>CREATE TABLE trending_campaigns (</p>
+<p>  id INT PRIMARY KEY AUTO_INCREMENT,</p>
+<p>  campaign_id INT NOT NULL,</p>
+<p>  trending_score DECIMAL(10,2) NOT NULL,</p>
+<p>  rank_position INT NOT NULL,</p>
+<p>  period ENUM('hour', 'day', 'week', 'month') DEFAULT 'day',</p>
+<p>  calculated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,</p>
+<p>  FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE,</p>
+<p>  INDEX idx_period_rank (period, rank_position),</p>
+<p>  INDEX idx_calculated_at (calculated_at)</p>
+<p>);</p>
+</code>`<code>
+
+<hr/>
+
+<h2>6. API Documentation</h2>
+
+<h3>Authentication Endpoints</h3>
+
+<p>#### POST /api/auth/register</p>
+<p>Register a new user.</p>
+
+<strong>Request Body:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "email": "user@example.com",</p>
+<p>  "password": "SecurePass123!",</p>
+<p>  "full_name": "John Doe",</p>
+<p>  "phone": "+212 6XX XXX XXX",</p>
+<p>  "role": "student" // or "donor"</p>
+<p>}</p>
+</code>`<code>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "user": {</p>
+<p>    "id": 1,</p>
+<p>    "email": "user@example.com",</p>
+<p>    "role": "student",</p>
+<p>    "full_name": "John Doe"</p>
+<p>  }</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### POST /api/auth/login</p>
+<p>Login user.</p>
+
+<strong>Request Body:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "email": "user@example.com",</p>
+<p>  "password": "SecurePass123!"</p>
+<p>}</p>
+</code>`<code>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "user": {</p>
+<p>    "id": 1,</p>
+<p>    "email": "user@example.com",</p>
+<p>    "role": "student",</p>
+<p>    "full_name": "John Doe",</p>
+<p>    "verified": 1</p>
+<p>  }</p>
+<p>}</p>
+</code>`<code>
+
+<h3>Campaign Endpoints</h3>
+
+<p>#### GET /api/campaigns</p>
+<p>Get all campaigns with filters.</p>
+
+<strong>Query Parameters:</strong>
+<li></code>category<code> - Filter by category</li>
+<li></code>location<code> - Filter by city</li>
+<li></code>university<code> - Filter by university</li>
+<li></code>minAmount<code> - Minimum goal amount</li>
+<li></code>maxAmount<code> - Maximum goal amount</li>
+<li></code>timeLeft<code> - Filter by time remaining</li>
+<li></code>progress<code> - Filter by funding progress</li>
+<li></code>search<code> - Search in title/description</li>
+<li></code>sort<code> - Sort order (newest, ending-soon, most-funded)</li>
+<li></code>limit<code> - Number of results (default: 20)</li>
+<li></code>offset<code> - Pagination offset</li>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "campaigns": [...],</p>
+<p>  "total": 100</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### GET /api/campaigns/:id</p>
+<p>Get campaign details.</p>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "campaign": {</p>
+<p>    "id": 1,</p>
+<p>    "title": "...",</p>
+<p>    "description": "...",</p>
+<p>    "goal_amount": 50000,</p>
+<p>    "current_amount": 25000,</p>
+<p>    "organizer": {...},</p>
+<p>    "stats": {...}</p>
+<p>  }</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### POST /api/campaigns</p>
+<p>Create new campaign.</p>
+
+<strong>Request Body:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "title": "Help Me Complete My Studies",</p>
+<p>  "description": "I am a computer science student...",</p>
+<p>  "goal_amount": 50000,</p>
+<p>  "category": "Education",</p>
+<p>  "city": "Casablanca",</p>
+<p>  "university": "Hassan II University",</p>
+<p>  "cover_image": "data:image/jpeg;base64,...",</p>
+<p>  "end_date": "2026-06-30"</p>
+<p>}</p>
+</code>`<code>
+
+<h3>Analytics Endpoints</h3>
+
+<p>#### POST /api/analytics/track-view/:campaignId</p>
+<p>Track campaign view.</p>
+
+<strong>Request Body:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "userId": 123,</p>
+<p>  "sessionId": "session-abc-123"</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### GET /api/analytics/trending</p>
+<p>Get trending campaigns.</p>
+
+<strong>Query Parameters:</strong>
+<li></code>period<code> - hour, day, week, month (default: day)</li>
+<li></code>limit<code> - Number of results (default: 10)</li>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "campaigns": [</p>
+<p>    {</p>
+<p>      "id": 1,</p>
+<p>      "title": "...",</p>
+<p>      "trending_score": 150.5,</p>
+<p>      "total_donors": 25,</p>
+<p>      "recent_views": 500</p>
+<p>    }</p>
+<p>  ],</p>
+<p>  "period": "day"</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### GET /api/analytics/campaign/:campaignId</p>
+<p>Get campaign analytics.</p>
+
+<strong>Query Parameters:</strong>
+<li></code>timeRange<code> - Days to analyze (default: 30)</li>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "analytics": {</p>
+<p>    "overallMetrics": {</p>
+<p>      "total_views": 1500,</p>
+<p>      "unique_visitors": 1200,</p>
+<p>      "total_donations": 25,</p>
+<p>      "total_raised": 50000,</p>
+<p>      "total_shares": 45,</p>
+<p>      "total_followers": 120,</p>
+<p>      "conversion_rate": 2.08</p>
+<p>    },</p>
+<p>    "viewStats": [...],</p>
+<p>    "donationStats": [...],</p>
+<p>    "shareStats": [...]</p>
+<p>  }</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### GET /api/analytics/platform</p>
+<p>Get platform-wide statistics.</p>
+
+<strong>Query Parameters:</strong>
+<li></code>timeRange<code> - Days to analyze (default: 30)</li>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "statistics": {</p>
+<p>    "platformMetrics": {</p>
+<p>      "total_campaigns": 100,</p>
+<p>      "active_campaigns": 75,</p>
+<p>      "completed_campaigns": 20,</p>
+<p>      "total_users": 500,</p>
+<p>      "total_raised": 5000000,</p>
+<p>      "success_rate": 20.0</p>
+<p>    },</p>
+<p>    "dailyStats": [...],</p>
+<p>    "topCampaigns": [...]</p>
+<p>  }</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### GET /api/analytics/activity-feed</p>
+<p>Get real-time activity feed.</p>
+
+<strong>Query Parameters:</strong>
+<li></code>limit<code> - Number of activities (default: 50)</li>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "activities": [</p>
+<p>    {</p>
+<p>      "type": "donation",</p>
+<p>      "donor_name": "John Doe",</p>
+<p>      "amount": 500,</p>
+<p>      "campaign_title": "...",</p>
+<p>      "created_at": "2025-11-15T10:30:00.000Z"</p>
+<p>    },</p>
+<p>    {</p>
+<p>      "type": "campaign",</p>
+<p>      "organizer_name": "Jane Smith",</p>
+<p>      "title": "...",</p>
+<p>      "created_at": "2025-11-15T10:25:00.000Z"</p>
+<p>    }</p>
+<p>  ]</p>
+<p>}</p>
+</code>`<code>
+
+<h3>Donation Endpoints</h3>
+
+<p>#### POST /api/donations</p>
+<p>Create donation.</p>
+
+<strong>Request Body:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "campaign_id": 1,</p>
+<p>  "amount": 500,</p>
+<p>  "donor_name": "John Doe",</p>
+<p>  "donor_email": "john@example.com",</p>
+<p>  "donor_message": "Best of luck!",</p>
+<p>  "is_anonymous": false,</p>
+<p>  "payment_method": "card",</p>
+<p>  "tip_amount": 25</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### GET /api/campaigns/:campaignId/donor-wall</p>
+<p>Get donor wall for campaign.</p>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "donorWall": {</p>
+<p>    "topDonors": [...],</p>
+<p>    "firstDonor": {...},</p>
+<p>    "recentDonors": [...],</p>
+<p>    "stats": {</p>
+<p>      "unique_donors": 25,</p>
+<p>      "average_donation": 2000</p>
+<p>    }</p>
+<p>  }</p>
+<p>}</p>
+</code>`<code>
+
+<h3>Admin Endpoints</h3>
+
+<p>#### GET /api/admin/campaigns?status=pending</p>
+<p>Get pending campaigns for review.</p>
+
+<p>#### POST /api/admin/campaigns/:id/approve</p>
+<p>Approve campaign.</p>
+
+<strong>Request Body:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "notes": "Looks good, approved!"</p>
+<p>}</p>
+</code>`<code>
+
+<p>#### POST /api/admin/campaigns/:id/reject</p>
+<p>Reject campaign.</p>
+
+<strong>Request Body:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "reason": "Please provide more details about your educational needs."</p>
+<p>}</p>
+</code>`<code>
+
+<h3>Stats Endpoint</h3>
+
+<p>#### GET /api/stats/homepage</p>
+<p>Get homepage statistics.</p>
+
+<strong>Response:</strong>
+</code>`<code>json
+<p>{</p>
+<p>  "success": true,</p>
+<p>  "stats": {</p>
+<p>    "totalCampaigns": 100,</p>
+<p>    "totalRaised": "5000000.00",</p>
+<p>    "totalStudents": 75,</p>
+<p>    "totalDonors": 450</p>
+<p>  }</p>
+<p>}</p>
+</code>`<code>
+
+<hr/>
+
+<h2>7. Frontend Components</h2>
+
+<h3>Component Hierarchy</h3>
+
+</code>`<code>
+<p>App</p>
+<p>├── Routes</p>
+<p>│   ├── Home</p>
+<p>│   │   ├── Navigation</p>
+<p>│   │   ├── Hero Section</p>
+<p>│   │   ├── Stats Section</p>
+<p>│   │   ├── Featured Campaigns</p>
+<p>│   │   ├── TrendingSection</p>
+<p>│   │   ├── All Campaigns</p>
+<p>│   │   └── Footer</p>
+<p>│   ├── Discover</p>
+<p>│   │   ├── Navigation</p>
+<p>│   │   ├── Filters Sidebar</p>
+<p>│   │   ├── Campaign Grid/List</p>
+<p>│   │   └── Footer</p>
+<p>│   ├── CampaignDetails</p>
+<p>│   │   ├── Navigation</p>
+<p>│   │   ├── Campaign Header</p>
+<p>│   │   ├── Image Gallery</p>
+<p>│   │   ├── Donation Section</p>
+<p>│   │   │   └── DonationModal</p>
+<p>│   │   ├── ShareButtons</p>
+<p>│   │   ├── FavoriteButton</p>
+<p>│   │   ├── Tabs</p>
+<p>│   │   │   ├── Story</p>
+<p>│   │   │   ├── Updates</p>
+<p>│   │   │   ├── Donors (DonorWall)</p>
+<p>│   │   │   └── Comments</p>
+<p>│   │   └── Footer</p>
+<p>│   ├── CreateCampaign</p>
+<p>│   ├── StudentDashboard</p>
+<p>│   │   ├── Stats Cards</p>
+<p>│   │   ├── My Campaigns</p>
+<p>│   │   └── CampaignAnalytics</p>
+<p>│   ├── DonorDashboard</p>
+<p>│   ├── AdminDashboard</p>
+<p>│   │   ├── Pending Reviews</p>
+<p>│   │   └── Platform Stats</p>
+<p>│   ├── PlatformStats</p>
+<p>│   │   ├── Key Metrics Cards</p>
+<p>│   │   ├── TrendingSection</p>
+<p>│   │   └── ActivityFeed</p>
+<p>│   └── Login</p>
+<p>└── ToastContainer</p>
+</code>`<code>
+
+<h3>Reusable Components</h3>
+
+<strong>UI Primitives:</strong>
+<li>Button (6 variants)</li>
+<li>Card (3 variants)</li>
+<li>Badge (8 colors)</li>
+<li>Progress (with milestones)</li>
+<li>Tabs (2 variants)</li>
+<li>Icon (Lucide React)</li>
+<li>Image (lazy loading)</li>
+
+<strong>Feature Components:</strong>
+<li>DonationModal</li>
+<li>ShareButtons</li>
+<li>FavoriteButton</li>
+<li>DonorWall</li>
+<li>MilestoneCelebration</li>
+<li>CampaignAnalytics</li>
+<li>TrendingSection</li>
+<li>ActivityFeed</li>
+
+<strong>Layout Components:</strong>
+<li>Navigation (responsive, role-based)</li>
+<li>Footer (links, social, newsletter)</li>
+<li>ScrollToTop</li>
+<li>ErrorBoundary</li>
+
+<hr/>
+
+<h2>8. User Roles & Permissions</h2>
+
+<h3>Student Role</h3>
+<strong>Can Do:</strong>
+<li>Create campaigns (draft status)</li>
+<li>Edit own campaigns</li>
+<li>Submit campaigns for review</li>
+<li>View campaign analytics</li>
+<li>Respond to comments</li>
+<li>Post updates</li>
+<li>Thank donors</li>
+<li>Request withdrawals</li>
+<li>View donation history</li>
+
+<strong>Cannot Do:</strong>
+<li>Approve other campaigns</li>
+<li>Access admin panel</li>
+<li>Modify other users' campaigns</li>
+<li>View all user data</li>
+
+<h3>Donor Role</h3>
+<strong>Can Do:</strong>
+<li>Browse and discover campaigns</li>
+<li>Donate to campaigns</li>
+<li>Follow/bookmark campaigns</li>
+<li>View donation history</li>
+<li>Download receipts</li>
+<li>Comment on campaigns</li>
+<li>Share campaigns</li>
+<li>View donor dashboard</li>
+
+<strong>Cannot Do:</strong>
+<li>Create campaigns (unless they also have student role)</li>
+<li>Access admin panel</li>
+<li>Modify campaigns</li>
+
+<h3>Admin Role</h3>
+<strong>Can Do:</strong>
+<li>Review pending campaigns</li>
+<li>Approve/reject campaigns</li>
+<li>View all campaigns</li>
+<li>View all users</li>
+<li>Access platform analytics</li>
+<li>Moderate content</li>
+<li>Manage user status</li>
+<li>View audit logs</li>
+<li>Send notifications</li>
+
+<strong>Cannot Do:</strong>
+<li>Delete campaigns (can only reject)</li>
+<li>Modify donations</li>
+<li>Access super-admin features</li>
+
+<h3>Super-Admin Role</h3>
+<strong>Can Do:</strong>
+<li>Everything Admin can do, plus:</li>
+<li>Manage other admins</li>
+<li>System configuration</li>
+<li>Database management</li>
+<li>Feature flags</li>
+<li>Payment gateway settings</li>
+
+<hr/>
+
+<h2>9. Workflows & Processes</h2>
+
+<h3>Campaign Creation Workflow</h3>
+
+</code>`<code>
+<li>Student Registration</li>
+<p>   ↓</p>
+<li>Profile Verification (optional but recommended)</li>
+<p>   ↓</p>
+<li>Create Campaign</li>
+<p>   - Fill form</p>
+<p>   - Upload image</p>
+<p>   - Set goal & deadline</p>
+<p>   - Write description</p>
+<p>   - Save as draft</p>
+<p>   ↓</p>
+<li>Review & Edit Draft</li>
+<p>   ↓</p>
+<li>Submit for Review</li>
+<p>   - Status: draft → pending</p>
+<p>   - Admin notified</p>
+<p>   ↓</p>
+<p>6a. APPROVED                   6b. REJECTED</p>
+<p>    - Status: pending → published   - Status: pending → rejected</p>
+<p>    - Email sent                    - Email with reason sent</p>
+<p>    - Campaign goes live            - Can edit and resubmit</p>
+<p>    ↓                               ↓</p>
+<li>Campaign is Live            7. Edit & Resubmit</li>
+<p>   - Accept donations            - Fix issues</p>
+<p>   - Post updates                - Submit again</p>
+<p>   - View analytics</p>
+</code>`<code>
+
+<h3>Donation Workflow</h3>
+
+</code>`<code>
+<li>Donor Browses Campaigns</li>
+<p>   ↓</p>
+<li>Selects Campaign</li>
+<p>   ↓</p>
+<li>Clicks "Donate Now"</li>
+<p>   - Donation modal opens</p>
+<p>   ↓</p>
+<li>Fills Donation Form</li>
+<p>   - Select/enter amount</p>
+<p>   - Enter name & email</p>
+<p>   - Optional message</p>
+<p>   - Choose payment method</p>
+<p>   - Optional: Add tip</p>
+<p>   - Optional: Donate anonymously</p>
+<p>   ↓</p>
+<li>Submits Donation</li>
+<p>   - Payment processed</p>
+<p>   - Database updated</p>
+<p>   - Campaign amount updated</p>
+<p>   ↓</p>
+<li>Post-Donation</li>
+<p>   - Thank you message</p>
+<p>   - Receipt sent via email</p>
+<p>   - Donor wall updated</p>
+<p>   - Milestone check</p>
+<p>   - Student notified</p>
+</code>`<code>
+
+<h3>Review & Approval Workflow</h3>
+
+</code>`<code>
+<p>ADMIN VIEW:</p>
+<li>Admin Dashboard</li>
+<p>   ↓</p>
+<li>"Pending Reviews" Tab</li>
+<p>   - Shows all pending campaigns</p>
+<p>   - Count badge</p>
+<p>   ↓</p>
+<li>Click to Review</li>
+<p>   - Full campaign details</p>
+<p>   - Student profile</p>
+<p>   - Campaign images</p>
+<p>   ↓</p>
+<p>4a. APPROVE                    4b. REJECT</p>
+<p>    - Add notes (optional)         - Add rejection reason (required)</p>
+<p>    - Click "Approve"              - Click "Reject"</p>
+<p>    ↓                              ↓</p>
+<li>Status Updated              5. Status Updated</li>
+<p>   - Campaign published           - Campaign rejected</p>
+<p>   - Email sent to student        - Email with reason sent</p>
+<p>   - Audit log created            - Student can edit & resubmit</p>
+</code>`<code>
+
+<hr/>
+
+<h2>10. Analytics & Metrics</h2>
+
+<h3>Platform Metrics (Current - November 15, 2025)</h3>
+
+<strong>Overall Statistics:</strong>
+<li>Total Campaigns: 9</li>
+<li>Active Campaigns: 7</li>
+<li>Completed Campaigns: 1</li>
+<li>Total Raised: 167,700 MAD</li>
+<li>Total Donations: 34</li>
+<li>Total Users: 8</li>
+<li>Total Students: 4</li>
+<li>Total Donors: 2</li>
+<li>Success Rate: 11.11%</li>
+
+<strong>Top Campaign:</strong>
+<li>Medical Student Needs Support for Final Year</li>
+<li>Raised: 53,800 MAD</li>
+<li>Goal: 60,000 MAD</li>
+<li>Progress: 89.67%</li>
+<li>Donors: 9</li>
+
+<h3>Trending Algorithm Details</h3>
+
+<strong>Formula:</strong>
+</code>`<code>
+<p>Trending Score = (Views × 1) + (Donations × 10) + (Shares × 5) + (Follows × 3)</p>
+</code>`<code>
+
+<strong>Weighting Rationale:</strong>
+<li><strong>Donations (10x)</strong>: Most valuable engagement</li>
+<li><strong>Shares (5x)</strong>: Brings new traffic</li>
+<li><strong>Follows (3x)</strong>: Shows sustained interest</li>
+<li><strong>Views (1x)</strong>: Basic engagement</li>
+
+<strong>Time Windows:</strong>
+<li>Hour: Last 60 minutes</li>
+<li>Day: Last 24 hours</li>
+<li>Week: Last 7 days</li>
+<li>Month: Last 30 days</li>
+
+<h3>Tracked Metrics Per Campaign</h3>
+
+<strong>Visibility:</strong>
+<li>Total views</li>
+<li>Unique visitors</li>
+<li>Page views per session</li>
+<li>Bounce rate</li>
+<li>Time on page</li>
+<li>Referrer sources</li>
+
+<strong>Engagement:</strong>
+<li>Donation count</li>
+<li>Donation amount</li>
+<li>Average donation</li>
+<li>Share count per platform</li>
+<li>Follow/bookmark count</li>
+<li>Comment count</li>
+<li>Update count</li>
+
+<strong>Conversion:</strong>
+<li>View → Donation rate</li>
+<li>Visitor → Donor rate</li>
+<li>Share → Donation rate</li>
+<li>Follow → Donation rate</li>
+
+<strong>Time-based:</strong>
+<li>Daily views trend</li>
+<li>Daily donations trend</li>
+<li>Hourly activity</li>
+<li>Best performing day</li>
+<li>Peak hours</li>
+
+<h3>User Activity Tracking</h3>
+
+<strong>Tracked Actions:</strong>
+<li>View (campaign pages)</li>
+<li>Donate (donation submissions)</li>
+<li>Share (social shares)</li>
+<li>Follow (bookmark campaigns)</li>
+<li>Comment (campaign comments)</li>
+<li>Search (search queries)</li>
+
+<strong>Stored Data:</strong>
+<li>User ID (if logged in)</li>
+<li>Activity type</li>
+<li>Campaign ID (if applicable)</li>
+<li>Metadata (JSON)</li>
+<li>Timestamp</li>
+<li>Session ID</li>
+
+<hr/>
+
+<h2>11. Security Features</h2>
+
+<h3>Password Security</h3>
+<li>BCrypt hashing with 10 salt rounds</li>
+<li>Minimum 8 characters required</li>
+<li>Password strength indicator on registration</li>
+<li>Complexity requirements encouraged</li>
+<li>No password stored in plain text</li>
+
+<h3>Authentication</h3>
+<li>Session-based with localStorage</li>
+<li>Role-based access control (RBAC)</li>
+<li>Protected routes on frontend</li>
+<li>Server-side validation on all endpoints</li>
+
+<h3>Rate Limiting</h3>
+<strong>Implemented:</strong> November 15, 2025
+<li>All API routes limited</li>
+<li>1000 requests per IP per 15 minutes</li>
+<li>Configurable limits</li>
+<li>HTTP 429 response when exceeded</li>
+
+<h3>Input Validation</h3>
+<li>Email format validation</li>
+<li>Phone number format validation</li>
+<li>SQL injection prevention (parameterized queries)</li>
+<li>XSS prevention (escaped output)</li>
+<li>File upload validation</li>
+<li>Amount range validation</li>
+
+<h3>File Upload Security</h3>
+<li>Allowed types: JPG, PNG only</li>
+<li>Max size: 5MB</li>
+<li>File type verification</li>
+<li>Virus scanning (recommended for production)</li>
+<li>Secure filename generation</li>
+<li>Separate upload directory</li>
+
+<h3>Database Security</h3>
+<li>Parameterized queries (no SQL injection)</li>
+<li>Foreign key constraints</li>
+<li>Cascade deletes where appropriate</li>
+<li>Index optimization</li>
+<li>Regular backups recommended</li>
+
+<h3>CORS Configuration</h3>
+<li>Configured for local development</li>
+<li>Origin whitelist for production</li>
+<li>Credentials allowed</li>
+<li>Pre-flight requests supported</li>
+
+<hr/>
+
+<h2>12. Deployment Guide</h2>
+
+<h3>Prerequisites</h3>
+<li>Node.js 18+ installed</li>
+<li>MySQL 8.0+ installed</li>
+<li>Git installed</li>
+<li>Domain name (for production)</li>
+<li>SSL certificate (for production)</li>
+
+<h3>Development Setup</h3>
+
+<strong>1. Clone Repository:</strong>
+</code>`<code>bash
+<p>git clone https://github.com/lkiwan/edufund.git</p>
+<p>cd edufund</p>
+</code>`<code>
+
+<strong>2. Install Dependencies:</strong>
+</code>`<code>bash
+<p>npm install</p>
+</code>`<code>
+
+<strong>3. Configure Environment:</strong>
+<p>Create </code>.env<code> file:</p>
+</code>`<code>env
+<h1>Database</h1>
+<p>DB_HOST=10.255.255.254</p>
+<p>DB_USER=root</p>
+<p>DB_PASSWORD=your_password</p>
+<p>DB_NAME=edufund</p>
+<p>DB_PORT=3306</p>
+
+<h1>Server</h1>
+<p>PORT=3001</p>
+<p>NODE_ENV=development</p>
+
+<h1>JWT (optional for future)</h1>
+<p>JWT_SECRET=your_secret_key</p>
+
+<h1>Email (optional)</h1>
+<p>SMTP_HOST=smtp.gmail.com</p>
+<p>SMTP_PORT=587</p>
+<p>SMTP_USER=your_email@gmail.com</p>
+<p>SMTP_PASS=your_app_password</p>
+</code>`<code>
+
+<strong>4. Initialize Database:</strong>
+</code>`<code>bash
+<p>node create-database.js</p>
+<p>node initialize-tables.js</p>
+<p>node create-analytics-tables.sql</p>
+</code>`<code>
+
+<strong>5. Seed Sample Data (optional):</strong>
+</code>`<code>bash
+<p>node seed-sample-data.js</p>
+<p>node add-test-user.js</p>
+</code>`<code>
+
+<strong>6. Start Development Servers:</strong>
+
+<p>Terminal 1 - Backend:</p>
+</code>`<code>bash
+<p>npm start</p>
+<h1>or</h1>
+<p>node server.js</p>
+</code>`<code>
+
+<p>Terminal 2 - Frontend:</p>
+</code>`<code>bash
+<p>npm run dev</p>
+</code>`<code>
+
+<strong>7. Access Application:</strong>
+<li>Frontend: http://localhost:5173</li>
+<li>Backend API: http://localhost:3001</li>
+
+<h3>Production Deployment</h3>
+
+<strong>1. Build Frontend:</strong>
+</code>`<code>bash
+<p>npm run build</p>
+</code>`<code>
+
+<strong>2. Configure Production Environment:</strong>
+</code>`<code>env
+<p>NODE_ENV=production</p>
+<p>PORT=80 or 443</p>
+<h1>Update database credentials</h1>
+<h1>Add production domain</h1>
+<h1>Configure SSL</h1>
+</code>`<code>
+
+<strong>3. Start Production Server:</strong>
+</code>`<code>bash
+<p>npm run serve</p>
+<h1>or</h1>
+<p>pm2 start server.js --name edufund</p>
+</code>`<code>
+
+<strong>4. Web Server Configuration (Nginx):</strong>
+</code>`<code>nginx
+<p>server {</p>
+<p>    listen 80;</p>
+<p>    server_name edufund.ma;</p>
+
+<p>    location / {</p>
+<p>        proxy_pass http://localhost:3001;</p>
+<p>        proxy_http_version 1.1;</p>
+<p>        proxy_set_header Upgrade $http_upgrade;</p>
+<p>        proxy_set_header Connection 'upgrade';</p>
+<p>        proxy_set_header Host $host;</p>
+<p>        proxy_cache_bypass $http_upgrade;</p>
+<p>    }</p>
+<p>}</p>
+</code>`<code>
+
+<strong>5. SSL Setup (Let's Encrypt):</strong>
+</code>`<code>bash
+<p>sudo certbot --nginx -d edufund.ma</p>
+</code>`<code>
+
+<strong>6. Database Backup:</strong>
+</code>`<code>bash
+<h1>Daily backup cron job</h1>
+<p>0 2 <em> </em> * mysqldump -u root -p edufund > /backups/edufund_$(date +\%Y\%m\%d).sql</p>
+</code>`<code>
+
+<h3>Monitoring & Maintenance</h3>
+
+<strong>Health Checks:</strong>
+<li>Monitor server uptime</li>
+<li>Check database connections</li>
+<li>Track error logs</li>
+<li>Monitor disk space</li>
+<li>Watch memory usage</li>
+
+<strong>Regular Tasks:</strong>
+<li>Daily database backups</li>
+<li>Weekly log rotation</li>
+<li>Monthly security updates</li>
+<li>Quarterly dependency updates</li>
+
+<hr/>
+
+<h2>13. Testing Documentation</h2>
+
+<h3>Test Users (November 15, 2025)</h3>
+
+<strong>Student Account:</strong>
+<li>Email: sarah.johnson@student.edu</li>
+<li>Password: password123</li>
+<li>Role: Student</li>
+<li>Status: Active, Verified</li>
+
+<strong>Donor Account:</strong>
+<li>Email: john.doe@donor.com</li>
+<li>Password: password123</li>
+<li>Role: Donor</li>
+<li>Status: Active</li>
+
+<strong>Admin Account:</strong>
+<li>Email: admin@edufund.com</li>
+<li>Password: admin123</li>
+<li>Role: Admin</li>
+<li>Status: Active</li>
+
+<h3>Test Campaigns</h3>
+
+<strong>1. Medical Student Campaign</strong>
+<li>ID: 2</li>
+<li>Title: Medical Student Needs Support for Final Year</li>
+<li>Goal: 60,000 MAD</li>
+<li>Raised: 53,800 MAD</li>
+<li>Progress: 89.67%</li>
+<li>Status: Active</li>
+<li>Donors: 9</li>
+
+<strong>2. Business Student Campaign</strong>
+<li>ID: 4</li>
+<li>Title: Business Student from Rural Area Needs Support</li>
+<li>Goal: 38,000 MAD</li>
+<li>Raised: 31,200 MAD</li>
+<li>Progress: 82.11%</li>
+<li>Status: Active</li>
+<li>Donors: 4</li>
+
+<h3>Feature Testing Checklist</h3>
+
+<strong>Authentication:</strong> ✅
+<li>[x] User registration (student)</li>
+<li>[x] User registration (donor)</li>
+<li>[x] User login</li>
+<li>[x] Password validation</li>
+<li>[x] Email validation</li>
+<li>[x] Role-based redirect</li>
+
+<strong>Campaign Management:</strong> ✅
+<li>[x] Create campaign</li>
+<li>[x] Edit campaign</li>
+<li>[x] Upload image</li>
+<li>[x] Set goal amount</li>
+<li>[x] Set deadline</li>
+<li>[x] Submit for review</li>
+
+<strong>Discovery:</strong> ✅
+<li>[x] Browse campaigns</li>
+<li>[x] Filter by category</li>
+<li>[x] Filter by location</li>
+<li>[x] Search campaigns</li>
+<li>[x] Sort campaigns</li>
+<li>[x] View campaign details</li>
+
+<strong>Donations:</strong> ✅
+<li>[x] Donate to campaign</li>
+<li>[x] Anonymous donation</li>
+<li>[x] Donation with message</li>
+<li>[x] Tip option</li>
+<li>[x] Receipt generation</li>
+
+<strong>Social Features:</strong> ✅
+<li>[x] Share to Facebook</li>
+<li>[x] Share to Twitter</li>
+<li>[x] Share to WhatsApp</li>
+<li>[x] Copy link</li>
+<li>[x] Bookmark campaign</li>
+<li>[x] View donor wall</li>
+
+<strong>Admin:</strong> ✅
+<li>[x] View pending campaigns</li>
+<li>[x] Approve campaign</li>
+<li>[x] Reject campaign</li>
+<li>[x] View audit log</li>
+
+<strong>Analytics:</strong> ✅
+<li>[x] View trending campaigns</li>
+<li>[x] Track campaign views</li>
+<li>[x] View platform stats</li>
+<li>[x] View activity feed</li>
+<li>[x] Campaign analytics</li>
+
+<hr/>
+
+<h2>14. Troubleshooting</h2>
+
+<h3>Common Issues</h3>
+
+<p>#### Database Connection Failed</p>
+<strong>Error:</strong> </code>Error: connect ECONNREFUSED<code>
+
+<strong>Solution:</strong>
+<li>Ensure MySQL is running</li>
+<li>Check database credentials in </code>.env<code></li>
+<li>Verify database exists: </code>node create-database.js<code></li>
+<li>Check MySQL port (default 3306)</li>
+
+<p>#### Frontend Cannot Connect to Backend</p>
+<strong>Error:</strong> </code>Failed to fetch<code> or </code>Network Error<code>
+
+<strong>Solution:</strong>
+<li>Ensure backend is running on port 3001</li>
+<li>Check Vite proxy in </code>vite.config.mjs<code></li>
+<li>Verify CORS settings in </code>server.js<code></li>
+<li>Clear browser cache</li>
+
+<p>#### Image Upload Fails</p>
+<strong>Error:</strong> </code>Upload failed<code> or </code>File too large<code>
+
+<strong>Solution:</strong>
+<li>Check </code>uploads/campaigns/<code> directory exists</li>
+<li>Verify write permissions</li>
+<li>Ensure file size < 5MB</li>
+<li>Check file type (JPG/PNG only)</li>
+
+<p>#### Trending Campaigns Not Showing</p>
+<strong>Issue:</strong> Empty trending section
+
+<strong>Cause:</strong> No recent activity (views, donations, shares)
+
+<strong>Solution:</strong>
+<li>Add some test data</li>
+<li>Track views manually</li>
+<li>Make test donations</li>
+<li>Share campaigns</li>
+<li>Adjust time period (try "week" or "month")</li>
+
+<p>#### Analytics Not Loading</p>
+<strong>Error:</strong> </code>Failed to fetch analytics<code>
+
+<strong>Solution:</strong>
+<li>Check if analytics tables exist</li>
+<li>Run </code>create-analytics-tables.sql<code></li>
+<li>Verify campaign has some activity</li>
+<li>Check console for SQL errors</li>
+
+<hr/>
+
+<h2>Appendix A: Environment Variables</h2>
+
+</code>`<code>env
+<h1>Database Configuration</h1>
+<p>DB_HOST=10.255.255.254          # Database host</p>
+<p>DB_USER=root                     # Database username</p>
+<p>DB_PASSWORD=                     # Database password</p>
+<p>DB_NAME=edufund                  # Database name</p>
+<p>DB_PORT=3306                     # Database port</p>
+
+<h1>Server Configuration</h1>
+<p>PORT=3001                        # Server port</p>
+<p>NODE_ENV=development             # Environment (development/production)</p>
+
+<h1>JWT Configuration (optional)</h1>
+<p>JWT_SECRET=your_jwt_secret       # JWT signing secret</p>
+
+<h1>Email Configuration (optional)</h1>
+<p>SMTP_HOST=smtp.gmail.com         # SMTP server</p>
+<p>SMTP_PORT=587                    # SMTP port</p>
+<p>SMTP_USER=email@gmail.com        # SMTP username</p>
+<p>SMTP_PASS=app_password           # SMTP password</p>
+
+<h1>API Keys (optional)</h1>
+<p>OPENAI_API_KEY=sk-...           # OpenAI API key</p>
+<p>ANTHROPIC_API_KEY=sk-ant-...    # Anthropic API key</p>
+
+<h1>Frontend</h1>
+<p>VITE_API_BASE_URL=http://localhost:3001/api</p>
+</code>`<code>
+
+<hr/>
+
+<h2>Appendix B: Git Commit History</h2>
+
+</code>`<code>
+<p>3d6b60c - November 15, 2025 - Add comprehensive analytics and visibility features</p>
+<p>79b7e7f - November 15, 2025 - Enhance platform UX with improved stats, toast notifications</p>
+<p>6693e1b - November 11, 2025 - Update README with comprehensive documentation</p>
+<p>9b38edd - November 11, 2025 - Initial commit: Educational Funding Platform</p>
+</code>`<code>
+
+<hr/>
+
+<h2>Appendix C: Dependencies</h2>
+
+<h3>Production Dependencies</h3>
+</code>`<code>json
+<p>{</p>
+<p>  "bcryptjs": "^2.4.3",</p>
+<p>  "cors": "^2.8.5",</p>
+<p>  "dotenv": "^16.3.1",</p>
+<p>  "express": "^4.18.2",</p>
+<p>  "express-rate-limit": "^7.1.5",</p>
+<p>  "framer-motion": "^10.16.1",</p>
+<p>  "lucide-react": "^0.284.0",</p>
+<p>  "multer": "^1.4.5-lts.1",</p>
+<p>  "mysql2": "^3.6.3",</p>
+<p>  "nodemailer": "^6.9.7",</p>
+<p>  "react": "^18.2.0",</p>
+<p>  "react-dom": "^18.2.0",</p>
+<p>  "react-router-dom": "^6.15.0",</p>
+<p>  "react-toastify": "^9.1.3",</p>
+<p>  "recharts": "^2.9.0",</p>
+<p>  "sharp": "^0.32.6"</p>
+<p>}</p>
+</code>`<code>
+
+<h3>Development Dependencies</h3>
+</code>`<code>json
+<p>{</p>
+<p>  "@vitejs/plugin-react": "^4.0.4",</p>
+<p>  "autoprefixer": "^10.4.15",</p>
+<p>  "eslint": "^8.48.0",</p>
+<p>  "postcss": "^8.4.29",</p>
+<p>  "tailwindcss": "^3.3.3",</p>
+<p>  "vite": "^4.4.9"</p>
+<p>}</p>
+</code>`<code>
+
+<hr/>
+
+<h2>Appendix D: File Structure</h2>
+</code>`<code>
+<p>edufund/</p>
+<p>├── .claude/</p>
+<p>│   └── settings.local.json</p>
+<p>├── node_modules/</p>
+<p>├── public/</p>
+<p>│   └── assets/</p>
+<p>├── src/</p>
+<p>│   ├── components/</p>
+<p>│   │   ├── layout/</p>
+<p>│   │   ├── ui/</p>
+<p>│   │   └── [feature components]</p>
+<p>│   ├── data/</p>
+<p>│   ├── db/</p>
+<p>│   ├── pages/</p>
+<p>│   ├── services/</p>
+<p>│   ├── styles/</p>
+<p>│   └── utils/</p>
+<p>├── uploads/</p>
+<p>│   └── campaigns/</p>
+<p>├── analytics-endpoints.js</p>
+<p>├── create-analytics-tables.sql</p>
+<p>├── create-database.js</p>
+<p>├── email-automation.js</p>
+<p>├── initialize-tables.js</p>
+<p>├── package.json</p>
+<p>├── README.md</p>
+<p>├── Routes.jsx</p>
+<p>├── server.js</p>
+<p>├── tailwind.config.js</p>
+<p>├── upload-service.js</p>
+<p>└── vite.config.mjs</p>
+</code>``
+
+<hr/>
+
+<h2>Summary</h2>
+
+<strong>Platform Status:</strong> Production Ready
+<strong>Total Features:</strong> 50+
+<strong>Total API Endpoints:</strong> 40+
+<strong>Total Database Tables:</strong> 34
+<strong>Total Code Lines:</strong> 10,000+
+<strong>Development Time:</strong> 4 days
+<strong>Last Updated:</strong> November 15, 2025
+
+<hr/>
+
+<strong>Generated by:</strong> Claude Code
+<strong>Documentation Version:</strong> 1.0
+<strong>Platform Version:</strong> 1.0
+<strong>Contact:</strong> omar.arhoune@gmail.com
+
+
+  <div class="footer">
+    <p><strong>EduFund Platform</strong> - Educational Crowdfunding Platform</p>
+    <p>Generated by Claude Code | Contact: omar.arhoune@gmail.com</p>
+    <p>© 2025 All rights reserved</p>
+  </div>
+</body>
+</html>
