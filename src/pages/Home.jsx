@@ -9,6 +9,7 @@ import Progress from '../components/ui/Progress';
 import Icon from '../components/AppIcon';
 import Image from '../components/AppImage';
 import FavoriteButton from '../components/FavoriteButton';
+import TrendingSection from '../components/TrendingSection';
 import api from '../services/api';
 import { formatCurrency as formatMAD } from '../utils/currency';
 
@@ -233,6 +234,11 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* Trending Campaigns Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <TrendingSection />
+      </div>
 
       {/* All Campaigns Section */}
       <section id="campaigns-section" className="py-16 bg-gray-50">

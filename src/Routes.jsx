@@ -13,6 +13,7 @@ import CreateCampaign from "./pages/CreateCampaign";
 import GlobalDashboard from "./pages/GlobalDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import PersonalAnalytics from "./pages/PersonalAnalytics";
+import PlatformStats from "./pages/PlatformStats";
 import About from "./pages/About";
 
 const Routes = () => {
@@ -25,6 +26,7 @@ const Routes = () => {
           <Route path="/" element={<Home />} />
           <Route path="/discover" element={<Discover />} />
           <Route path="/global-dashboard" element={<GlobalDashboard />} />
+          <Route path="/platform-stats" element={<PlatformStats />} />
           <Route path="/how-it-works" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />

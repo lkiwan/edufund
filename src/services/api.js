@@ -305,11 +305,36 @@ export const verificationAPI = {
 // ==== ANALYTICS API ====
 
 export const analyticsAPI = {
-  getCampaign: (campaignId) =>
-    apiRequest(`/analytics/campaign/${campaignId}`),
+  // Track campaign view
+  trackView: (campaignId, data) =>
+    apiRequest(`/analytics/track-view/${campaignId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
+  // Get trending campaigns
+  getTrending: (params) =>
+    apiRequest(`/analytics/trending${params ? '?' + new URLSearchParams(params) : ''}`),
+
+  // Get campaign analytics
+  getCampaign: (campaignId, params) =>
+    apiRequest(`/analytics/campaign/${campaignId}${params ? '?' + new URLSearchParams(params) : ''}`),
+
+  // Get student analytics
   getStudent: (userId) =>
     apiRequest(`/analytics/student/${userId}`),
+
+  // Get user view history
+  getUserHistory: (userId, params) =>
+    apiRequest(`/analytics/user/${userId}/history${params ? '?' + new URLSearchParams(params) : ''}`),
+
+  // Get platform statistics (admin)
+  getPlatform: (params) =>
+    apiRequest(`/analytics/platform${params ? '?' + new URLSearchParams(params) : ''}`),
+
+  // Get activity feed
+  getActivityFeed: (params) =>
+    apiRequest(`/analytics/activity-feed${params ? '?' + new URLSearchParams(params) : ''}`),
 };
 
 // ==== NOTIFICATIONS API ====

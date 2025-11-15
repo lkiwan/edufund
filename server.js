@@ -2663,6 +2663,40 @@ try {
   console.warn('To enable email automation, configure EMAIL_SERVICE, EMAIL_USER, and EMAIL_PASSWORD in .env');
 }
 
+// ========== ANALYTICS & TRACKING ENDPOINTS ==========
+
+const analyticsEndpoints = require('./analytics-endpoints');
+
+// Track campaign view
+app.post('/api/analytics/track-view/:campaignId', (req, res) => {
+  analyticsEndpoints.trackCampaignView(req, res, pool);
+});
+
+// Get trending campaigns
+app.get('/api/analytics/trending', (req, res) => {
+  analyticsEndpoints.getTrendingCampaigns(req, res, pool);
+});
+
+// Get campaign analytics (for campaign owner)
+app.get('/api/analytics/campaign/:campaignId', (req, res) => {
+  analyticsEndpoints.getCampaignAnalytics(req, res, pool);
+});
+
+// Get user view history
+app.get('/api/analytics/user/:userId/history', (req, res) => {
+  analyticsEndpoints.getUserViewHistory(req, res, pool);
+});
+
+// Get platform-wide statistics (admin only)
+app.get('/api/analytics/platform', (req, res) => {
+  analyticsEndpoints.getPlatformStatistics(req, res, pool);
+});
+
+// Get real-time activity feed
+app.get('/api/analytics/activity-feed', (req, res) => {
+  analyticsEndpoints.getActivityFeed(req, res, pool);
+});
+
 // ========== PROFILE ROUTES ==========
 app.use('/api', profileRoutes);
 

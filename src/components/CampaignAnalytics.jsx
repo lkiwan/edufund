@@ -18,10 +18,22 @@ const CampaignAnalytics = ({ campaignId }) => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/analytics/campaign/${campaignId}`);
+      const response = await fetch(`${API_BASE_URL}/analytics/campaign/${campaignId}?timeRange=30`);
       const data = await response.json();
       if (data.success) {
-        setAnalytics(data.data);
+        // Transform the new analytics structure
+        const transformed = {
+          totalRaised: parseFloat(data.analytics.overallMetrics.total_raised || 0),
+          donors: data.analytics.overallMetrics.total_donations || 0,
+          views: data.analytics.overallMetrics.total_views || 0,
+          shares: data.analytics.overallMetrics.total_shares || 0,
+          updatesPosted: 0, // You can add this to the backend if needed
+          viewStats: data.analytics.viewStats || [],
+          donationStats: data.analytics.donationStats || [],
+          shareStats: data.analytics.shareStats || [],
+          conversionRate: data.analytics.overallMetrics.conversion_rate || 0
+        };
+        setAnalytics(transformed);
       }
     } catch (err) {
       console.error('Error fetching analytics:', err);
